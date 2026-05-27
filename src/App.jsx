@@ -1,0 +1,46 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Header from "./components/header/Header";
+import Aside from "./components/Aside/Aside";
+import Main from "./components/Main/Main";
+import NaxaFooter from "./components/NaxaFooter/NaxaFooter";
+import Footer from "./components/Footer/Footer";
+import Discounts from "./Pages/Discount/Discounts"; // <-- Подключаем твою новую страницу
+
+function App() {
+  return (
+    <BrowserRouter>
+      <div className="  w-full min-h-screen text-[#1a1a1a]">
+        {/* === КОРПУС ТЕЛЕВИЗОРА (Остается всегда) === */}
+        <Header />
+
+        {/* === ЭКРАН (Здесь контент меняется) === */}
+        <Routes>
+          {/* Канал 1: Главная страница (Путь "/") */}
+          <Route
+            path="/"
+            element={
+              <div className="max-w-[1320px] mx-auto px-[15px] xl:px-[20px] flex items-start gap-[30px] mt-[30px] mb-[50px]">
+                <div className="flex-shrink-0 w-[280px]">
+                  <Aside />
+                </div>
+                <div className="flex-1 w-full overflow-hidden">
+                  <Main />
+                </div>
+              </div>
+            }
+          />
+
+          {/* Канал 2: Новая страница (Путь "/discounts") */}
+          <Route path="/discounts" element={<Discounts />} />
+        </Routes>
+        {/* === КОНЕЦ ЭКРАНА === */}
+
+        {/* === НИЖНИЙ КОРПУС ТЕЛЕВИЗОРА (Остается всегда) === */}
+        <NaxaFooter />
+        <Footer />
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
