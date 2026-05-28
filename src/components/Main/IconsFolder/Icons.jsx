@@ -2,7 +2,7 @@ import { iconsImg, iconsText } from "../Code";
 
 const Icons = () => {
   return (
-    <div className="relative top-[40px]  w-full border-t border-b border-[#e5e5e5] my-6 py-4 flex items-center justify-between gap-4">
+    <div className="w-full border-t border-b border-[#e5e5e5] my-6 py-4 flex items-center justify-between gap-4">
       <button className="cursor-pointer rounded-full h-10 w-10 border border-black flex items-center justify-center bg-white hover:bg-gray-50 transition-colors shrink-0">
         <img
           src="https://assets.streamlinehq.com/image/private/w_300,h_300,ar_1/f_auto/v1/icons/ui-actions/arrow-left-alt-gjov0rrfaidmwfiboacch.png/arrow-left-alt-5ufw09e1z3jbk920li7a28.png?_a=DATAiZAAZAA0"
@@ -29,7 +29,6 @@ const Icons = () => {
         ))}
       </div>
 
-      {/* Աջ սլաք */}
       <button className="cursor-pointer rounded-full h-10 w-10 border border-black flex items-center justify-center bg-white hover:bg-gray-50 transition-colors shrink-0">
         <img
           src="https://png.pngtree.com/png-clipart/20190903/original/pngtree-right-arrow-png-image_4421150.jpg"

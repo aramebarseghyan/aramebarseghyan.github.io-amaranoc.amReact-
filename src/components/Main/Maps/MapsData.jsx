@@ -1,8 +1,8 @@
 const MapsData = () => {
   return (
-    <div className="flex items-center gap-[15px] mt-[20px]">
-      <div className="font-sans flex items-center border border-black w-[110px] h-[40px] rounded-[22px] cursor-pointer px-[15px] justify-between">
-        <span className="ml-[8px]">Քարտեզ</span>
+    <div className="flex items-center gap-4 mt-5">
+      <div className="font-sans flex items-center border border-black w-[110px] h-[40px] rounded-[22px] cursor-pointer px-4 justify-between">
+        <span className="ml-2">Քարտեզ</span>
         <img
           src="https://png.pngtree.com/png-vector/20190409/ourmid/pngtree-map-icon-vector-illustration-in-line-style-for-any-purpose-png-image_924190.jpg"
           alt="map"
