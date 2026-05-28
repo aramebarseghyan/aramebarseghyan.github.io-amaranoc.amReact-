@@ -4,9 +4,11 @@ const People = () => {
   const [num, setNum] = useState(1);
 
   return (
-    <div className=" absolute top-[450px] w-full pt-6 border-t border-[#f0f0f0]">
-      <h4 className=" absolute top-10 left-6  text-[16px] font-bold mb-4 text-[#111]">Մարդկանց թույլատրելի քանակ</h4>
-      <div className=" relative left-5 absolute top-20 flex items-center gap-4">
+    <div className="w-full pt-5 border-t border-[#f0f0f0]">
+      <h4 className="text-[16px] font-bold mb-4 text-[#111]">
+        Մարդկանց թույլատրելի քանակ
+      </h4>
+      <div className="flex items-center gap-4">
         <button
           onClick={() => setNum((prev) => (prev > 1 ? prev - 1 : 1))}
           className="h-11 w-11 rounded-full bg-[#f2f2f2] hover:bg-[#e5e5e5] text-[#111] flex items-center justify-center text-xl cursor-pointer transition-colors border-none"
