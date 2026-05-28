@@ -6,6 +6,8 @@ const Header = () => {
   return (
     <header className="w-full h-[90px] bg-white border-b border-[#eaeaea] select-none">
       <div className="max-w-[1320px] mx-auto h-full flex items-center justify-between px-[15px] xl:px-[20px]">
+       
+
         <div className="flex-shrink-0">
           <HeaderLogo />
         </div>
