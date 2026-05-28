@@ -20,13 +20,13 @@ const HeaderEnd = ({ className }) => {
         </Navigation>
       </div>
 
-      <div className="relative flex items-center">
+      <div className="flex items-center border border-gray-300 h-[45px] w-[250px] rounded-[25px] pl-5 pr-4 focus-within:border-black transition-colors">
         <HeaderEnd3
           place={"Որոնում"}
-          className="pl-5 pr-10 border border-gray-300 h-[45px] w-[250px] rounded-[25px] outline-none text-sm focus:border-black transition-colors placeholder-gray-400"
+          className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
         />
         <FontAwesomeIcon
-          className="absolute right-4 text-gray-500 pointer-events-none text-sm"
+          className="text-gray-500 text-sm ml-2"
           icon={faMagnifyingGlass}
         />
       </div>
