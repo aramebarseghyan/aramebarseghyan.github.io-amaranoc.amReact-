@@ -1,6 +1,6 @@
 const MapsData = () => {
   return (
-    <div className="flex items-center gap-4 mt-5">
+    <div className="ml-10 flex items-center gap-4 mt-5">
       <div className="font-sans flex items-center border border-black w-[110px] h-[40px] rounded-[22px] cursor-pointer px-4 justify-between">
         <span className="ml-2">Քարտեզ</span>
         <img
