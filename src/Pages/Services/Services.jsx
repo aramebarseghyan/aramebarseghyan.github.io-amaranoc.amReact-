@@ -1,8 +1,13 @@
+import ServiceCards from "./Components/ServiceCards";
+import CategoryNavigation from "./Components/Slides";
 
 const Services = () => {
   return (
-    <div>Services</div>
-  )
-}
+    <>
+      <CategoryNavigation />
+      <ServiceCards />
+    </>
+  );
+};
 
-export default Services
+export default Services;
