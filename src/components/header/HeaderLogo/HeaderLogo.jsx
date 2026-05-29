@@ -1,6 +1,5 @@
-
 const HeaderLogo = () => {
-  return 
+  return;
 };
 
 export default HeaderLogo;

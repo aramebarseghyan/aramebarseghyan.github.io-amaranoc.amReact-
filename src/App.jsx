@@ -5,6 +5,8 @@ import Main from "./components/Main/Main";
 import NaxaFooter from "./components/NaxaFooter/NaxaFooter";
 import Footer from "./components/Footer/Footer";
 import Discounts from "./Pages/Discount/Discounts"; // <-- Подключаем твою новую страницу
+import Services from "./Pages/Services/Services";
+import Info from "./Pages/Info/Info";
 
 function App() {
   return (
@@ -32,6 +34,8 @@ function App() {
 
           {/* Канал 2: Новая страница (Путь "/discounts") */}
           <Route path="/discounts" element={<Discounts />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/info" element={<Info />} />
         </Routes>
         {/* === КОНЕЦ ЭКРАНА === */}
 
