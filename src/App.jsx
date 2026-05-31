@@ -4,20 +4,18 @@ import Aside from "./components/Aside/Aside";
 import Main from "./components/Main/Main";
 import NaxaFooter from "./components/NaxaFooter/NaxaFooter";
 import Footer from "./components/Footer/Footer";
-import Discounts from "./Pages/Discount/Discounts"; // <-- Подключаем твою новую страницу
+import Discounts from "./Pages/Discount/Discounts";
 import Services from "./Pages/Services/Services";
 import Info from "./Pages/Info/Info";
+import HouseDetails from "./Pages/HouseDetails/HouseDetails";
 
 function App() {
   return (
     <BrowserRouter>
-      <div className="  w-full min-h-screen text-[#1a1a1a]">
-        {/* === КОРПУС ТЕЛЕВИЗОРА (Остается всегда) === */}
+      <div className="w-full min-h-screen text-[#1a1a1a]">
         <Header />
 
-        {/* === ЭКРАН (Здесь контент меняется) === */}
         <Routes>
-          {/* Канал 1: Главная страница (Путь "/") */}
           <Route
             path="/"
             element={
@@ -32,14 +30,13 @@ function App() {
             }
           />
 
-          {/* Канал 2: Новая страница (Путь "/discounts") */}
           <Route path="/discounts" element={<Discounts />} />
           <Route path="/services" element={<Services />} />
           <Route path="/info" element={<Info />} />
-        </Routes>
-        {/* === КОНЕЦ ЭКРАНА === */}
 
-        {/* === НИЖНИЙ КОРПУС ТЕЛЕВИЗОРА (Остается всегда) === */}
+          <Route path="/house/:id" element={<HouseDetails />} />
+        </Routes>
+
         <NaxaFooter />
         <Footer />
       </div>

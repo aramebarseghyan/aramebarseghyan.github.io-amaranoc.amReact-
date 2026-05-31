@@ -3,12 +3,14 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { faAddressCard } from "@fortawesome/free-regular-svg-icons";
 import { faAccessibleIcon } from "@fortawesome/free-brands-svg-icons";
+import { Link } from "react-router-dom";
 
 const House = () => {
   return (
     <div className="flex flex-wrap gap-5 w-full mt-6">
       {qardImg.map((imgUrl, index) => (
-        <div
+        <Link
+          to={`/house/${index}`}
           key={index}
           className="w-[calc((100%-40px)/3)] flex flex-col rounded-[12px] overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] bg-white transition-transform duration-200 hover:scale-[1.02]"
         >
@@ -45,7 +47,7 @@ const House = () => {
               {qardPrice[index]} ֏
             </p>
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );
