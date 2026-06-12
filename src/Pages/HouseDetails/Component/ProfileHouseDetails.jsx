@@ -11,7 +11,6 @@ const ProfileHouseDetails = ({ index }) => {
   const img5 = qardImg[(index + 4) % qardImg.length] || mainImg;
 
   return (
-    // Изменили ширину и высоту: max-w-[1320px] w-[95%] h-[550px]
     <div className="max-w-[1320px] w-[95%] mx-auto mt-6 flex gap-4 h-[550px]">
       <div className="w-[60%] relative rounded-[20px] overflow-hidden shadow-sm group">
         <img

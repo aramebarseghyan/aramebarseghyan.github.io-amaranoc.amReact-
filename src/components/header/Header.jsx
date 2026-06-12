@@ -1,17 +1,18 @@
 import HeaderEnd from "./HeaderEnd/HeaderEnd";
 import HeaderLogo from "./HeaderLogo/HeaderLogo";
 import HeaderText from "./HeaderText/HeaderText";
-
+import { userCardStore } from "../../store/useCartStore";
 const Header = () => {
+  const count = userCardStore((state) => state.count);
   return (
     <header className="w-full h-[90px] bg-white border-b border-[#eaeaea] select-none">
       <div className="max-w-[1320px] mx-auto h-full flex items-center justify-between px-[15px] xl:px-[20px]">
-       
-
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <HeaderLogo />
         </div>
-
+        <div className="qanak">
+          <p>qanaky {count}</p>
+        </div>
         <div className="flex-grow flex justify-center">
           <HeaderText />
         </div>

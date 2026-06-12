@@ -6,6 +6,7 @@ import {
   faUser,
   faMagnifyingGlass,
 } from "@fortawesome/free-solid-svg-icons";
+import { Link } from "react-router-dom";
 
 const HeaderEnd = ({ className }) => {
   return (
@@ -15,9 +16,11 @@ const HeaderEnd = ({ className }) => {
           <FontAwesomeIcon icon={faGlobe} />
         </Navigation>
 
-        <Navigation className="bg-transparent border-none p-0 cursor-pointer text-gray-700 hover:text-black transition-colors outline-none text-[17px]">
-          <FontAwesomeIcon icon={faUser} />
-        </Navigation>
+        <Link to={"/login"}>
+          <Navigation className="bg-transparent border-none p-0 cursor-pointer text-gray-700 hover:text-black transition-colors outline-none text-[17px]">
+            <FontAwesomeIcon icon={faUser} />
+          </Navigation>
+        </Link>
       </div>
 
       <div className="flex items-center border border-gray-300 h-[45px] w-[250px] rounded-[25px] pl-5 pr-4 focus-within:border-black transition-colors">

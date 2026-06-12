@@ -1,11 +1,17 @@
 import { qardImg, qartName, qardPeople, qardPrice } from "../Code";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLocationDot } from "@fortawesome/free-solid-svg-icons";
-import { faAddressCard } from "@fortawesome/free-regular-svg-icons";
-import { faAccessibleIcon } from "@fortawesome/free-brands-svg-icons";
+import { faLocationDot, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router-dom";
+import { userCardStore } from "../../../store/useCartStore";
 
 const House = () => {
+  const increment = userCardStore((state) => state.increment);
+
+  const handleAddClick = (e) => {
+    e.preventDefault(); 
+    increment();
+  };
+
   return (
     <div className="flex flex-wrap gap-5 w-full mt-6">
       {qardImg.map((imgUrl, index) => (
@@ -30,20 +36,20 @@ const House = () => {
                 {qartName[index]}
               </h3>
 
-              <p className="text-[15px] font-sans text-[#666] m-0">
-                <FontAwesomeIcon
-                  icon={faAccessibleIcon}
-                  style={{ color: "orange", marginLeft: "10px" }}
-                />
-                {qardPeople[index]} անձ
-              </p>
+              {/* КНОПКА ДОБАВЛЕНИЯ */}
+              <button
+                onClick={handleAddClick}
+                className="bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-orange-600 transition-colors"
+              >
+                <FontAwesomeIcon icon={faPlus} />
+              </button>
             </div>
 
+            <p className="text-[15px] font-sans text-[#666] m-0">
+              {qardPeople[index]} անձ
+            </p>
+
             <p className="font-sans text-[18px] font-bold text-black m-0">
-              <FontAwesomeIcon
-                icon={faAddressCard}
-                style={{ color: "orange", marginRight: "10px" }}
-              />
               {qardPrice[index]} ֏
             </p>
           </div>

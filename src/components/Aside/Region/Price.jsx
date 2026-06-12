@@ -7,7 +7,8 @@ const Price = ({ plc1, plc2 }) => {
 
   return (
     <div className="w-full border-t border-[#f0f0f0] pt-5">
-      <div className="flex justify-between items-center w-full mb-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full mb-4 gap-3 sm:gap-0">
+        {/* Добавил flex-col для мобилок, на планшетах и выше - в строку */}
         <h4 className="text-[16px] font-bold text-[#111] m-0">Արժեք</h4>
         <div className="flex gap-2 m-0">
           {arr.map((valute, index) => (
@@ -25,17 +26,19 @@ const Price = ({ plc1, plc2 }) => {
           ))}
         </div>
       </div>
-      <div className="flex items-center justify-between gap-3 w-full">
+
+      {/* Сделал инпуты flex-1, чтобы они равномерно тянулись на любом экране */}
+      <div className="flex items-center justify-between gap-2 sm:gap-3 w-full">
         <input
           placeholder={plc1}
           type="text"
-          className="w-28 px-3 h-[44px] border border-[#ddd] rounded-[12px] text-[14px] outline-none focus:border-[#111] transition-colors"
+          className="flex-1 min-w-[80px] px-3 h-[44px] border border-[#ddd] rounded-[12px] text-[14px] outline-none focus:border-[#111] transition-colors"
         />
         <span className="text-[#888] font-medium">-</span>
         <input
           placeholder={plc2}
           type="text"
-          className="w-28 px-3 h-[44px] border border-[#ddd] rounded-[12px] text-[14px] outline-none focus:border-[#111] transition-colors"
+          className="flex-1 min-w-[80px] px-3 h-[44px] border border-[#ddd] rounded-[12px] text-[14px] outline-none focus:border-[#111] transition-colors"
         />
       </div>
     </div>

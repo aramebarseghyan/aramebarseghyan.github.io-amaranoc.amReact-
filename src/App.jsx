@@ -8,6 +8,10 @@ import Discounts from "./Pages/Discount/Discounts";
 import Services from "./Pages/Services/Services";
 import Info from "./Pages/Info/Info";
 import HouseDetails from "./Pages/HouseDetails/HouseDetails";
+import Login from "./Pages/Login/Login";
+import Register from "./Pages/Login/Register";
+
+
 
 function App() {
   return (
@@ -33,6 +37,9 @@ function App() {
           <Route path="/discounts" element={<Discounts />} />
           <Route path="/services" element={<Services />} />
           <Route path="/info" element={<Info />} />
+
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
           <Route path="/house/:id" element={<HouseDetails />} />
         </Routes>
