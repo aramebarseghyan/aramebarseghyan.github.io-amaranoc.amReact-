@@ -6,4 +6,9 @@ export const userCardStore = create((set) => ({
     set((state) => ({
       count: state.count + 1,
     })),
+
+  decrement: () =>
+    set((state) => ({
+      count: state.count > 0 ? state.count - 1 : 0,
+    })),
 }));
