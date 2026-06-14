@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, limit } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLocationDot } from "@fortawesome/free-solid-svg-icons";
@@ -18,7 +18,9 @@ const House = () => {
   useEffect(() => {
     const fetchHouses = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "properties"));
+        const q = query(collection(db, "properties"), limit(30));
+        const querySnapshot = await getDocs(q);
+
         const data = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
@@ -47,7 +49,7 @@ const House = () => {
   if (loading) {
     return (
       <div className="w-full text-center py-10 font-sans text-xl text-gray-500">
-        Загрузка карточек из базы...
+        loading ...
       </div>
     );
   }
@@ -61,8 +63,8 @@ const House = () => {
           className="w-[calc((100%-40px)/3)] flex flex-col rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] bg-white transition-transform duration-200 hover:scale-[1.02]"
         >
           <img
-            src={house.imageUrl || house.imgUrl}
-            alt={house.name}
+            src={house.image}
+            alt={house.title || "house"}
             className="w-full h-60 object-cover"
           />
 
@@ -73,7 +75,7 @@ const House = () => {
                   icon={faLocationDot}
                   style={{ color: "orange", marginRight: "8px" }}
                 />
-                {house.name}
+                {house.location || "Локация"}
               </h3>
 
               <button
@@ -92,11 +94,11 @@ const House = () => {
             </div>
 
             <p className="text-[15px] font-sans text-[#666] m-0">
-              {house.people} անձ
+              {house.capacity}
             </p>
 
             <p className="font-sans text-[18px] font-bold text-black m-0">
-              {house.price} ֏
+              {house.price}
             </p>
           </div>
         </Link>
