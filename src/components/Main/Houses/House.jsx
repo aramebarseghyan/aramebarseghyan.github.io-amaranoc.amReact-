@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { qardImg, qartName, qardPeople, qardPrice } from "../Code";
+import { useState, useEffect } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase"; 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router-dom";
@@ -7,34 +8,55 @@ import { userCardStore } from "../../../store/useCartStore";
 import { Heart } from "lucide-react";
 
 const House = () => {
+  const [houses, setHouses] = useState([]); 
+  const [loading, setLoading] = useState(true);
+  const [likedCards, setLikedCards] = useState({});
+
   const increment = userCardStore((state) => state.increment);
   const decrement = userCardStore((state) => state.decrement);
 
-  const [likedCards, setLikedCards] = useState({});
+  useEffect(() => {
+    const fetchHouses = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "properties"));
+        const data = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setHouses(data);
+      } catch (error) {
+        console.error("Ошибка загрузки:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHouses();
+  }, []);
 
-  const handleHeartClick = (e, index) => {
+  const handleHeartClick = (e, id) => {
     e.preventDefault();
-
-    if (likedCards[index]) {
-      setLikedCards((prev) => ({ ...prev, [index]: false }));
+    if (likedCards[id]) {
+      setLikedCards((prev) => ({ ...prev, [id]: false }));
       decrement();
     } else {
-      setLikedCards((prev) => ({ ...prev, [index]: true }));
+      setLikedCards((prev) => ({ ...prev, [id]: true }));
       increment();
     }
   };
 
+  if (loading) return <div>Загрузка...</div>;
+
   return (
     <div className="flex flex-wrap gap-5 w-full mt-6">
-      {qardImg.map((imgUrl, index) => (
+      {houses.map((house) => (
         <Link
-          to={`/house/${index}`}
-          key={index}
+          to={`/house/${house.id}`}
+          key={house.id} 
           className="w-[calc((100%-40px)/3)] flex flex-col rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] bg-white transition-transform duration-200 hover:scale-[1.02]"
         >
           <img
-            src={imgUrl}
-            alt={qartName[index]}
+            src={house.imageUrl}
+            alt={house.name}
             className="w-full h-60 object-cover"
           />
 
@@ -45,17 +67,17 @@ const House = () => {
                   icon={faLocationDot}
                   style={{ color: "orange", marginRight: "8px" }}
                 />
-                {qartName[index]}
+                {house.name}
               </h3>
 
               <button
-                onClick={(e) => handleHeartClick(e, index)}
+                onClick={(e) => handleHeartClick(e, house.id)}
                 className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors"
               >
                 <Heart
                   size={20}
                   className={`transition-colors duration-300 ${
-                    likedCards[index]
+                    likedCards[house.id]
                       ? "text-red-500 fill-red-500"
                       : "text-gray-400"
                   }`}
@@ -64,11 +86,11 @@ const House = () => {
             </div>
 
             <p className="text-[15px] font-sans text-[#666] m-0">
-              {qardPeople[index]} անձ
+              {house.people} անձ
             </p>
 
             <p className="font-sans text-[18px] font-bold text-black m-0">
-              {qardPrice[index]} ֏
+              {house.price} ֏
             </p>
           </div>
         </Link>
