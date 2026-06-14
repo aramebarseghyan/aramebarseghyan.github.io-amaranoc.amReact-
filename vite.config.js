@@ -3,5 +3,5 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/aramebarseghyan.github.io-amaranoc.amReact-/",
+  base: "/", // Вот так всё точно заработает локально!
 });

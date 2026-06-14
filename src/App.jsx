@@ -11,8 +11,6 @@ import HouseDetails from "./Pages/HouseDetails/HouseDetails";
 import Login from "./Pages/Login/Login";
 import Register from "./Pages/Login/Register";
 
-
-
 function App() {
   return (
     <BrowserRouter>

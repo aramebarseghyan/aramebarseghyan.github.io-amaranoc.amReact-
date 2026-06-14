@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase"; 
+import { db } from "../../../firebase";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router-dom";
@@ -8,7 +8,7 @@ import { userCardStore } from "../../../store/useCartStore";
 import { Heart } from "lucide-react";
 
 const House = () => {
-  const [houses, setHouses] = useState([]); 
+  const [houses, setHouses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [likedCards, setLikedCards] = useState({});
 
@@ -25,7 +25,7 @@ const House = () => {
         }));
         setHouses(data);
       } catch (error) {
-        console.error("Ошибка загрузки:", error);
+        console.error("Ошибка загрузки данных из Firebase:", error);
       } finally {
         setLoading(false);
       }
@@ -44,18 +44,24 @@ const House = () => {
     }
   };
 
-  if (loading) return <div>Загрузка...</div>;
+  if (loading) {
+    return (
+      <div className="w-full text-center py-10 font-sans text-xl text-gray-500">
+        Загрузка карточек из базы...
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-wrap gap-5 w-full mt-6">
       {houses.map((house) => (
         <Link
           to={`/house/${house.id}`}
-          key={house.id} 
+          key={house.id}
           className="w-[calc((100%-40px)/3)] flex flex-col rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] bg-white transition-transform duration-200 hover:scale-[1.02]"
         >
           <img
-            src={house.imageUrl}
+            src={house.imageUrl || house.imgUrl}
             alt={house.name}
             className="w-full h-60 object-cover"
           />
