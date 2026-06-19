@@ -1,4 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import { getRedirectResult } from "firebase/auth";
+import { auth } from "./firebase";
 import Header from "./components/header/Header";
 import Aside from "./components/Aside/Aside";
 import Main from "./components/Main/Main";
@@ -12,6 +15,18 @@ import Login from "./Pages/Login/Login";
 import Register from "./Pages/Login/Register";
 
 function App() {
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          const user = result.user;
+          console.log("Google sign-in success:", user);
+        }
+      })
+      .catch((error) => {
+        console.error("Redirect sign-in error:", error);
+      });
+  }, []);
   return (
     <BrowserRouter>
       <div className="w-full min-h-screen text-[#1a1a1a]">

@@ -1,17 +1,38 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from "react-router-dom"; // НОВОЕ: добавили useNavigate
+import { signInWithPopup } from "firebase/auth"; // НОВОЕ: импорт функции Firebase
+import { auth, googleProvider } from "../../firebase";
 
 const Register = () => {
+  const navigate = useNavigate(); // НОВОЕ: инициализация навигации
+
+  // НОВОЕ: Функция, которая срабатывает при клике на Google
+  const handleGoogleSignIn = async () => {
+    try {
+      // Вызываем окно Google
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      console.log("Успешный вход!", user);
+
+      // Если всё прошло успешно, перенаправляем пользователя в чат (или на главную)
+      navigate("/chat");
+    } catch (error) {
+      console.error("Ошибка авторизации:", error.message);
+      // Здесь позже можно будет добавить красивое уведомление об ошибке для пользователя
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-[440px] rounded-2xl bg-white p-8 shadow-sm border border-gray-100">
-        
         {/* Title */}
         <h2 className="text-center text-xl font-bold text-gray-900 mb-8">
           Գրանցում
         </h2>
 
         <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-          {/* Full Name Input */}
+          {/* ... Твои инпуты (Анун, Эл. հասցե и т.д.) остаются без изменений ... */}
+
           <div>
             <input
               type="text"
@@ -19,8 +40,6 @@ const Register = () => {
               className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base placeholder-gray-400 outline-none transition focus:border-orange-400"
             />
           </div>
-
-          {/* Phone Input */}
           <div>
             <input
               type="tel"
@@ -28,8 +47,6 @@ const Register = () => {
               className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base placeholder-gray-400 outline-none transition focus:border-orange-400"
             />
           </div>
-
-          {/* Email Input */}
           <div>
             <input
               type="email"
@@ -37,8 +54,6 @@ const Register = () => {
               className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base placeholder-gray-400 outline-none transition focus:border-orange-400"
             />
           </div>
-
-          {/* Password Input */}
           <div>
             <input
               type="password"
@@ -63,15 +78,19 @@ const Register = () => {
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-200"></div>
           </div>
-          <span className="relative bg-white px-3 text-sm text-gray-400">կամ</span>
+          <span className="relative bg-white px-3 text-sm text-gray-400">
+            կամ
+          </span>
         </div>
 
         {/* Google Register Button */}
         <button
           type="button"
+          onClick={handleGoogleSignIn} // НОВОЕ: привязали нашу функцию к клику
           className="flex w-full items-center justify-center gap-2 rounded-full border border-[#ff9f43] bg-white py-3.5 text-base font-medium text-gray-900 transition hover:bg-gray-50 active:scale-[0.99]"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
+            {/* ... твои пути SVG остаются без изменений ... */}
             <path
               fill="#4285F4"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -99,7 +118,6 @@ const Register = () => {
             Մուտք
           </Link>
         </div>
-
       </div>
     </div>
   );

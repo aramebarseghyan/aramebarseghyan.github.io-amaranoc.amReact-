@@ -1,8 +1,9 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBOwMVyP_JEDLQJRY813-0G4c_5TeAcgP8",
+  apiKey: "AIzaSyBoWMVyP_JEdLQJRY813-0G4c_5TeACgP8",
   authDomain: "vite-project-c58ed.firebaseapp.com",
   projectId: "vite-project-c58ed",
   storageBucket: "vite-project-c58ed.firebasestorage.app",
@@ -13,3 +14,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+
+export default app;
