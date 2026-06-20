@@ -1,21 +1,36 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import HeaderEnd from "./HeaderEnd/HeaderEnd";
 import HeaderLogo from "./HeaderLogo/HeaderLogo";
 import HeaderText from "./HeaderText/HeaderText";
 import { userCardStore } from "../../store/useCartStore";
+import { useUserStore } from "../../store/useUserStore";
 import { ShoppingBag } from "lucide-react";
 
 const Header = () => {
   const [isHovered, setIsHovered] = useState(false);
+  const userName = useUserStore((state) => state.userName);
+  const logout = useUserStore((state) => state.logout);
+  const navigate = useNavigate();
   
   const count = userCardStore((state) => state.count);
   const decrement = userCardStore((state) => state.decrement);
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <header className="w-full h-22.5 bg-white border-b border-[#eaeaea] select-none">
       <div className="max-w-330 mx-auto h-full flex items-center justify-between px-[15px] xl:px-[20px]">
-        <div className="shrink-0">
+        <div className="shrink-0 flex items-center gap-4">
           <HeaderLogo />
+          {userName && (
+            <div className="hidden md:block text-sm font-medium text-gray-700">
+              Բարև, {userName}
+            </div>
+          )}
         </div>
 
         <div
@@ -63,7 +78,7 @@ const Header = () => {
         </div>
 
         <div className="shrink-0">
-          <HeaderEnd />
+          <HeaderEnd isLoggedIn={Boolean(userName)} onLogout={handleLogout} />
         </div>
       </div>
     </header>

@@ -1,6 +1,20 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useUserStore } from "../../store/useUserStore";
 
 const Login = () => {
+  const [loginValue, setLoginValue] = useState("");
+  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+  const setUserName = useUserStore((state) => state.setUserName);
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    const savedName = loginValue || "User";
+    setUserName(savedName);
+    navigate("/");
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-[440px] rounded-2xl bg-white p-8 shadow-sm border border-gray-100">
@@ -8,10 +22,12 @@ const Login = () => {
           Մուտք
         </h2>
 
-        <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <input
               type="text"
+              value={loginValue}
+              onChange={(e) => setLoginValue(e.target.value)}
               placeholder="Էլ. հասցե կամ հեռախոսահամար"
               className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base placeholder-gray-400 outline-none transition focus:border-orange-400"
             />

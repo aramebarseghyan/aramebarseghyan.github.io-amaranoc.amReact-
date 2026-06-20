@@ -10,6 +10,7 @@ import Footer from "./components/Footer/Footer";
 import Discounts from "./Pages/Discount/Discounts";
 import Services from "./Pages/Services/Services";
 import Info from "./Pages/Info/Info";
+import Chat from "./Pages/Chat/Chat";
 import HouseDetails from "./Pages/HouseDetails/HouseDetails";
 import Login from "./Pages/Login/Login";
 import Register from "./Pages/Login/Register";
@@ -53,6 +54,7 @@ function App() {
 
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/chat" element={<Chat />} />
 
           <Route path="/house/:id" element={<HouseDetails />} />
         </Routes>

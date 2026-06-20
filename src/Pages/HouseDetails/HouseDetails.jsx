@@ -3,7 +3,7 @@ import HeaderHouseDetalis from "./Component/HeaderHouseDetails";
 import ProfileHouseDetails from "./Component/ProfileHouseDetails";
 import Add from "./Component/Add";
 import Calendar from "./Component/Calendar";
-import Advant from "./Component/Advant"; // Изменено здесь
+import Advant from "./Component/Advant";
 import Descreption from "./Component/Descreption";
 
 const HouseDetails = () => {

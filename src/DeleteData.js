@@ -1,5 +1,5 @@
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
-import { db } from "./firebase"; // Убедись, что путь к твоему firebase.js верный
+import { db } from "./firebase";
 
 export const clearAllProperties = async () => {
   try {
@@ -8,9 +8,9 @@ export const clearAllProperties = async () => {
       deleteDoc(doc(db, "properties", document.id)),
     );
     await Promise.all(deletePromises);
-    alert("База данных очищена!");
+    alert("Տվյալների բազան մաքրվել է!");
   } catch (error) {
-    console.error("Ошибка при удалении:", error);
-    alert("Ошибка при удалении данных");
+    console.error("Ջնջման սխալ:", error);
+    alert("Տվյալների ջնջման սխալ");
   }
 };

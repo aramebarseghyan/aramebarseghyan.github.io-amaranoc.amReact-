@@ -1,24 +1,38 @@
-import { Link, useNavigate } from "react-router-dom"; // НОВОЕ: добавили useNavigate
-import { signInWithPopup } from "firebase/auth"; // НОВОЕ: импорт функции Firebase
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "../../firebase";
+import { useUserStore } from "../../store/useUserStore";
 
 const Register = () => {
-  const navigate = useNavigate(); // НОВОЕ: инициализация навигации
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  // НОВОЕ: Функция, которая срабатывает при клике на Google
+  const navigate = useNavigate();
+  const setUserName = useUserStore((state) => state.setUserName);
+
+  const handleRegister = (e) => {
+    e.preventDefault();
+    const nameToSave = fullName || email || "User";
+    setUserName(nameToSave);
+    console.log("Օգտատեր գրանցվեց:", nameToSave);
+    navigate("/");
+  };
+
   const handleGoogleSignIn = async () => {
     try {
-      // Вызываем окно Google
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
+      const displayName = user.displayName || user.email || "User";
+      localStorage.setItem("registeredName", displayName);
 
-      console.log("Успешный вход!", user);
+      console.log("Հաջող մուտք!", user);
 
-      // Если всё прошло успешно, перенаправляем пользователя в чат (или на главную)
-      navigate("/chat");
+      navigate("/");
     } catch (error) {
-      console.error("Ошибка авторизации:", error.message);
-      // Здесь позже можно будет добавить красивое уведомление об ошибке для пользователя
+      console.error("Ավտորիզացման սխալ:", error.message);
     }
   };
 
@@ -30,12 +44,12 @@ const Register = () => {
           Գրանցում
         </h2>
 
-        <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-          {/* ... Твои инпуты (Анун, Эл. հասցե и т.д.) остаются без изменений ... */}
-
+        <form onSubmit={handleRegister} className="space-y-4">
           <div>
             <input
               type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
               placeholder="Անուն Ազգանուն"
               className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base placeholder-gray-400 outline-none transition focus:border-orange-400"
             />
@@ -43,6 +57,8 @@ const Register = () => {
           <div>
             <input
               type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               placeholder="Հեռախոսահամար"
               className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base placeholder-gray-400 outline-none transition focus:border-orange-400"
             />
@@ -50,6 +66,8 @@ const Register = () => {
           <div>
             <input
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Էլ. հասցե"
               className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base placeholder-gray-400 outline-none transition focus:border-orange-400"
             />
@@ -57,6 +75,8 @@ const Register = () => {
           <div>
             <input
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Գաղտնաբառ"
               className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base placeholder-gray-400 outline-none transition focus:border-orange-400"
             />
@@ -86,11 +106,10 @@ const Register = () => {
         {/* Google Register Button */}
         <button
           type="button"
-          onClick={handleGoogleSignIn} // НОВОЕ: привязали нашу функцию к клику
+          onClick={handleGoogleSignIn}
           className="flex w-full items-center justify-center gap-2 rounded-full border border-[#ff9f43] bg-white py-3.5 text-base font-medium text-gray-900 transition hover:bg-gray-50 active:scale-[0.99]"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
-            {/* ... твои пути SVG остаются без изменений ... */}
             <path
               fill="#4285F4"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
