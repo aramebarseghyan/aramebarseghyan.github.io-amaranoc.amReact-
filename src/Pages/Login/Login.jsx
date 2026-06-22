@@ -1,18 +1,72 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, googleProvider, db } from "../../firebase";
 import { useUserStore } from "../../store/useUserStore";
 
 const Login = () => {
   const [loginValue, setLoginValue] = useState("");
   const [password, setPassword] = useState("");
+
   const navigate = useNavigate();
   const setUserName = useUserStore((state) => state.setUserName);
 
-  const handleLogin = (e) => {
+  // Вход через Email и Пароль
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const savedName = loginValue || "User";
-    setUserName(savedName);
-    navigate("/");
+    if (!loginValue || !password) {
+      alert("Խնդրում ենք լրացնել դաշտերը");
+      return;
+    }
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        loginValue,
+        password,
+      );
+      const user = userCredential.user;
+
+      const savedName = user.displayName || user.email || "User";
+      setUserName(savedName);
+
+      console.log("Հաջող մուտք:", savedName);
+      navigate("/");
+    } catch (error) {
+      console.error("Մուտքի սխալ:", error.message);
+      alert("Սխալ էլ. հասցե կամ գաղտնաբառ");
+    }
+  };
+
+  // Вход через Google
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const displayName = user.displayName || user.email || "User";
+
+      // На всякий случай обновляем данные юзера в БД при входе
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          uid: user.uid,
+          name: displayName,
+          email: user.email,
+          avatar: user.photoURL || "https://via.placeholder.com/40",
+        },
+        { merge: true },
+      );
+
+      setUserName(displayName);
+      localStorage.setItem("registeredName", displayName);
+
+      console.log("Հաջող մուտք Google-ով!", user);
+      navigate("/");
+    } catch (error) {
+      console.error("Ավտորիզացման սխալ:", error.message);
+      alert("Ավտորիզացման սխալ: " + error.message);
+    }
   };
 
   return (
@@ -28,7 +82,7 @@ const Login = () => {
               type="text"
               value={loginValue}
               onChange={(e) => setLoginValue(e.target.value)}
-              placeholder="Էլ. հասցե կամ հեռախոսահամար"
+              placeholder="Էլ. հասցե"
               className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base placeholder-gray-400 outline-none transition focus:border-orange-400"
             />
           </div>
@@ -36,6 +90,8 @@ const Login = () => {
           <div>
             <input
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Գաղտնաբառ"
               className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base placeholder-gray-400 outline-none transition focus:border-orange-400"
             />
@@ -69,6 +125,7 @@ const Login = () => {
 
         <button
           type="button"
+          onClick={handleGoogleSignIn}
           className="flex w-full items-center justify-center gap-2 rounded-full border border-[#ff9f43] bg-white py-3.5 text-base font-medium text-gray-900 transition hover:bg-gray-50 active:scale-[0.99]"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">

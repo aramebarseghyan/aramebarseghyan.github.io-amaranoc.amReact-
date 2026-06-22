@@ -40,7 +40,7 @@ const Arajark = ({ className }) => {
           />
         </div>
       </div>
-    </div>
+    </div>  
   );
 };
 

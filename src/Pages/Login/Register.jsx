@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "../../firebase";
+import {
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  updateProfile,
+} from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, googleProvider, db } from "../../firebase";
 import { useUserStore } from "../../store/useUserStore";
 
 const Register = () => {
@@ -13,33 +18,81 @@ const Register = () => {
   const navigate = useNavigate();
   const setUserName = useUserStore((state) => state.setUserName);
 
-  const handleRegister = (e) => {
+  // Регистрация через Email и Пароль
+  const handleRegister = async (e) => {
     e.preventDefault();
-    const nameToSave = fullName || email || "User";
-    setUserName(nameToSave);
-    console.log("Օգտատեր գրանցվեց:", nameToSave);
-    navigate("/");
+    if (!email || !password) {
+      alert("Խնդրում ենք լրացնել էլ. հասցեն և գաղտնաբառը");
+      return;
+    }
+
+    try {
+      // 1. Создаем пользователя в Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
+      const user = userCredential.user;
+
+      // 2. Обновляем имя профиля в самом Auth
+      await updateProfile(user, {
+        displayName: fullName || email.split("@")[0],
+      });
+
+      // 3. Сохраняем данные в коллекцию "users" для чата
+      const nameToSave = fullName || email.split("@")[0] || "User";
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        name: nameToSave,
+        email: email,
+        phone: phone,
+        avatar: "https://via.placeholder.com/40",
+      });
+
+      setUserName(nameToSave);
+      console.log("Օգտատեր գրանցվեց:", nameToSave);
+      navigate("/");
+    } catch (error) {
+      console.error("Գրանցման սխալ:", error.message);
+      alert("Գրանցման սխալ: " + error.message);
+    }
   };
 
+  // Регистрация/Вход через Google
   const handleGoogleSignIn = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      const displayName = user.displayName || user.email || "User";
-      localStorage.setItem("registeredName", displayName);
 
-      console.log("Հաջող մուտք!", user);
+      const displayName = user.displayName || user.email || "User";
+
+      // Сохраняем/обновляем данные в коллекции "users"
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          uid: user.uid,
+          name: displayName,
+          email: user.email,
+          avatar: user.photoURL || "https://via.placeholder.com/40",
+        },
+        { merge: true },
+      ); // merge: true не удалит старые данные, если юзер уже есть
+
+      localStorage.setItem("registeredName", displayName);
+      setUserName(displayName);
+      console.log("Հաջող մուտք Google-ով!", user);
 
       navigate("/");
     } catch (error) {
       console.error("Ավտորիզացման սխալ:", error.message);
+      alert("Ավտորիզացման սխալ: " + error.message);
     }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-[440px] rounded-2xl bg-white p-8 shadow-sm border border-gray-100">
-        {/* Title */}
         <h2 className="text-center text-xl font-bold text-gray-900 mb-8">
           Գրանցում
         </h2>
@@ -82,7 +135,6 @@ const Register = () => {
             />
           </div>
 
-          {/* Register Button */}
           <div className="pt-2">
             <button
               type="submit"
@@ -93,7 +145,6 @@ const Register = () => {
           </div>
         </form>
 
-        {/* Divider */}
         <div className="relative my-6 flex items-center justify-center">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-200"></div>
@@ -103,12 +154,12 @@ const Register = () => {
           </span>
         </div>
 
-        {/* Google Register Button */}
         <button
           type="button"
           onClick={handleGoogleSignIn}
           className="flex w-full items-center justify-center gap-2 rounded-full border border-[#ff9f43] bg-white py-3.5 text-base font-medium text-gray-900 transition hover:bg-gray-50 active:scale-[0.99]"
         >
+          {/* SVG Google... */}
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path
               fill="#4285F4"
@@ -130,7 +181,6 @@ const Register = () => {
           <span>Գրանցվել Google-ի միջոցով</span>
         </button>
 
-        {/* Login Link */}
         <div className="mt-8 text-center text-sm font-medium text-gray-900">
           Արդեն գրանցվա՞ծ եք:{" "}
           <Link to="/login" className="text-[#ff9f43] hover:underline">
