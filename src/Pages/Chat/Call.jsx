@@ -7,7 +7,6 @@ import {
   onSnapshot,
   collection,
   addDoc,
-  deleteDoc,
 } from "firebase/firestore";
 
 const servers = {
@@ -22,6 +21,24 @@ export default function Call({ mode, callId, caller, callee, onClose }) {
   const [status, setStatus] = useState(
     mode === "offer" ? "calling" : "incoming",
   );
+
+  const hangup = async () => {
+    try {
+      if (callId) {
+        const callDocRef = doc(db, "calls", callId);
+        await updateDoc(callDocRef, { status: "ended" }).catch(() => {});
+      }
+    } catch (error) {
+      console.error(error);
+    }
+    try {
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+      pcRef.current?.close();
+    } catch (error) {
+      console.error(error);
+    }
+    onClose && onClose();
+  };
 
   useEffect(() => {
     let callDocRef = null;
@@ -135,8 +152,8 @@ export default function Call({ mode, callId, caller, callee, onClose }) {
       }
     }
 
-    start().catch((e) => {
-      console.error("Call setup error:", e);
+    start().catch((error) => {
+      console.error("Call setup error:", error);
       alert(
         "Միկրոֆոնի հասանելիության սխալ: Ստուգեք բրաուզերի կարգավորումները:",
       );
@@ -146,27 +163,13 @@ export default function Call({ mode, callId, caller, callee, onClose }) {
       try {
         localStreamRef.current?.getTracks().forEach((t) => t.stop());
         pcRef.current?.close();
-      } catch (e) {}
+      } catch (error) {
+        console.error(error);
+      }
       if (unsubCall) unsubCall();
       if (unsubCallerCandidates) unsubCallerCandidates();
     };
   }, []);
-
-  const hangup = async () => {
-    try {
-      if (callId) {
-        const callDocRef = doc(db, "calls", callId);
-        await updateDoc(callDocRef, { status: "ended" }).catch(() => {});
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    try {
-      localStreamRef.current?.getTracks().forEach((t) => t.stop());
-      pcRef.current?.close();
-    } catch (e) {}
-    onClose && onClose();
-  };
 
   const acceptCall = async () => {
     if (!callId || !offerRef.current || !pcRef.current) return;
@@ -181,8 +184,8 @@ export default function Call({ mode, callId, caller, callee, onClose }) {
         status: "connected",
       });
       setStatus("connected");
-    } catch (e) {
-      console.error("Accept error:", e);
+    } catch (error) {
+      console.error("Accept error:", error);
     }
   };
 
@@ -195,9 +198,9 @@ export default function Call({ mode, callId, caller, callee, onClose }) {
   };
 
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-auto md:right-8 z-[100] animate-in slide-in-from-bottom-5 duration-300">
+    <div className="fixed bottom-4 left-4 right-4 sm:bottom-8 sm:left-auto sm:right-8 z-[100] animate-in slide-in-from-bottom-5 duration-300">
       <div
-        className={`relative bg-gray-900/90 backdrop-blur-xl border border-white/10 p-4 rounded-3xl shadow-2xl flex items-center gap-5 w-[320px] overflow-hidden ${
+        className={`relative bg-gray-900/90 backdrop-blur-xl border border-white/10 p-3 sm:p-4 rounded-2xl sm:rounded-3xl shadow-2xl flex items-center gap-3 sm:gap-5 w-full sm:w-80 overflow-hidden ${
           status === "calling" || status === "incoming"
             ? "ring-2 ring-orange-500/50 shadow-orange-500/20"
             : "ring-1 ring-white/20"
@@ -226,7 +229,7 @@ export default function Call({ mode, callId, caller, callee, onClose }) {
 
         {/* Text Info */}
         <div className="flex-1 min-w-0 z-10">
-          <div className="text-white font-semibold truncate text-sm">
+          <div className="text-white font-semibold truncate text-xs sm:text-sm">
             {mode === "offer" ? callee?.name : caller?.name || "Անհայտ զանգ"}
           </div>
           <div className="text-xs font-medium flex items-center gap-1 mt-0.5">
@@ -245,16 +248,16 @@ export default function Call({ mode, callId, caller, callee, onClose }) {
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center gap-2 z-10">
+        <div className="flex items-center gap-1 sm:gap-2 z-10 flex-shrink-0">
           {status === "incoming" ? (
             <>
               <button
                 onClick={acceptCall}
-                className="w-10 h-10 bg-green-500 hover:bg-green-400 text-white rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90"
+                className="w-9 h-9 sm:w-10 sm:h-10 bg-green-500 hover:bg-green-400 text-white rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 flex-shrink-0"
                 title="Ընդունել"
               >
                 <svg
-                  className="w-5 h-5"
+                  className="w-4 h-4 sm:w-5 sm:h-5"
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
@@ -263,11 +266,11 @@ export default function Call({ mode, callId, caller, callee, onClose }) {
               </button>
               <button
                 onClick={rejectCall}
-                className="w-10 h-10 bg-red-500 hover:bg-red-400 text-white rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90"
+                className="w-9 h-9 sm:w-10 sm:h-10 bg-red-500 hover:bg-red-400 text-white rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 flex-shrink-0"
                 title="Մերժել"
               >
                 <svg
-                  className="w-5 h-5"
+                  className="w-4 h-4 sm:w-5 sm:h-5"
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
@@ -278,10 +281,10 @@ export default function Call({ mode, callId, caller, callee, onClose }) {
           ) : (
             <button
               onClick={hangup}
-              className="w-10 h-10 bg-red-500 hover:bg-red-400 text-white rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90"
+              className="w-9 h-9 sm:w-10 sm:h-10 bg-red-500 hover:bg-red-400 text-white rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 flex-shrink-0"
               title="Ավարտել զանգը"
             >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.52-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
               </svg>
             </button>

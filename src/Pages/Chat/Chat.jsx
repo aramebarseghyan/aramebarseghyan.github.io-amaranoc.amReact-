@@ -136,17 +136,17 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-gradient-to-br from-gray-50 to-gray-100 md:items-center md:justify-center md:p-6 overflow-hidden">
-      <div className="w-full max-w-5xl bg-white md:rounded-3xl shadow-xl shadow-gray-200/50 md:border border-gray-100 flex flex-row h-full md:h-[85vh] overflow-hidden">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 md:items-center md:justify-center md:p-6 overflow-hidden">
+      <div className="w-full max-w-6xl bg-white md:rounded-3xl shadow-xl shadow-gray-200/50 md:border border-gray-100 flex flex-row h-full md:h-[85vh] overflow-hidden">
         {/* ՁԱԽ ՊԱՆԵԼ: Օգտատերերի ցանկ */}
-        <div className="w-[300px] border-r border-gray-100 flex flex-col bg-white">
-          <div className="p-5 border-b border-gray-100 bg-white">
-            <h2 className="text-gray-900 text-xl font-bold tracking-tight">
+        <div className="hidden sm:flex w-full sm:w-64 md:w-80 border-r border-gray-100 flex-col bg-white overflow-hidden">
+          <div className="p-4 sm:p-5 border-b border-gray-100 bg-white">
+            <h2 className="text-gray-900 text-lg sm:text-xl font-bold tracking-tight">
               Չատեր
             </h2>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-1">
+          <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-1">
             {/* Ընդհանուր չատ */}
             <div
               onClick={() => setSelectedUser("general")}
@@ -251,12 +251,13 @@ const Chat = () => {
                     const callRef = doc(collection(db, "calls"));
                     setOutgoingCallId(callRef.id);
                   }}
-                  className="ml-auto flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-xl hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 transform active:scale-95 font-medium"
+                  className="ml-auto flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 transform active:scale-95 font-medium text-sm sm:text-base"
+                  title="Զանգել"
                 >
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 fill-current flex-shrink-0" viewBox="0 0 24 24">
                     <path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57-.35-.11-.74-.03-1.02.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1C8.7 6.45 8.5 5.25 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1zM19 12h2a9 9 0 0 0-9-9v2c3.87 0 7 3.13 7 7zm-4 0h2c0-2.76-2.24-5-5-5v2c1.66 0 3 1.34 3 3z" />
                   </svg>
-                  Զանգել
+                  <span className="hidden sm:inline">Զանգել</span>
                 </button>
               </>
             )}
@@ -265,7 +266,7 @@ const Chat = () => {
           {/* Նամակներ */}
           <div
             ref={chatContainerRef}
-            className="flex-1 p-6 overflow-y-auto space-y-6 pt-24 pb-20"
+            className="flex-1 p-3 sm:p-6 overflow-y-auto space-y-3 sm:space-y-6 pt-20 sm:pt-24 pb-24 sm:pb-20"
           >
             {messages.length > 0 ? (
               messages.map((msg) => {
@@ -338,7 +339,7 @@ const Chat = () => {
           {/* Տեքստի մուտքագրում */}
           <form
             onSubmit={handleSubmit}
-            className="p-4 border-t border-gray-200 bg-white/80 backdrop-blur-md absolute bottom-0 w-full flex gap-3 items-center z-10"
+            className="p-3 sm:p-4 border-t border-gray-200 bg-white/80 backdrop-blur-md sticky bottom-0 w-full flex gap-2 sm:gap-3 items-center z-10"
           >
             <input
               type="text"
@@ -346,20 +347,21 @@ const Chat = () => {
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder={
                 !auth.currentUser
-                  ? "Մուտք գործեք նամակ գրելու համար..."
+                  ? "Մուտք գործեք..."
                   : selectedUser === "general"
-                    ? "Գրել ընդհանուր չատում..."
+                    ? "Գրել չատում..."
                     : `Գրել ${selectedUser.name}-ին...`
               }
               disabled={!auth.currentUser}
-              className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-5 py-3 outline-none transition-all focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-50 disabled:opacity-50 text-gray-700"
+              className="flex-1 rounded-xl sm:rounded-2xl border border-gray-200 bg-gray-50 px-4 sm:px-5 py-2 sm:py-3 outline-none transition-all focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-50 disabled:opacity-50 text-sm sm:text-base text-gray-700"
             />
             <button
               type="submit"
               disabled={!auth.currentUser}
-              className="bg-gradient-to-r from-orange-400 to-orange-500 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:hover:translate-y-0"
+              className="bg-gradient-to-r from-orange-400 to-orange-500 text-white px-4 sm:px-8 py-2 sm:py-3 rounded-lg sm:rounded-2xl font-bold shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:hover:translate-y-0 text-sm sm:text-base flex-shrink-0"
             >
-              Ուղարկել
+              <span className="hidden sm:inline">Ուղարկել</span>
+              <span className="sm:hidden">→</span>
             </button>
           </form>
         </div>
