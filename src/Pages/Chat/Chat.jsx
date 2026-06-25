@@ -4,19 +4,24 @@ import {
   collection,
   addDoc,
   query,
+  where,
   orderBy,
   onSnapshot,
   serverTimestamp,
+  doc,
 } from "firebase/firestore";
+import Call from "./Call";
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState("general"); // Լռելյայն բացվում է ընդհանուր չատը
-  const messagesEndRef = useRef(null);
+  const [selectedUser, setSelectedUser] = useState("general");
+  const [outgoingCallId, setOutgoingCallId] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(null);
 
-  // 1. Բեռնում ենք բոլոր օգտատերերին ձախ պանելի համար
+  const chatContainerRef = useRef(null);
+
   useEffect(() => {
     const q = query(collection(db, "users"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -33,21 +38,41 @@ const Chat = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2. Բեռնում ենք հաղորդագրությունները՝ կախված ընտրված չատի տեսակից
+  // ✨ ՈՒՂՂՎԱԾ Է. Հիմա ցույց կտա և՛ զանգի պահը, և՛ խոսելու պահը, մինչև status-ը չդառնա ended
   useEffect(() => {
-    if (!auth.currentUser || !selectedUser) return;
+    if (!auth.currentUser) return;
+    const q = query(
+      collection(db, "calls"),
+      where("callee", "==", auth.currentUser.uid),
+      where("status", "in", ["ringing", "connected"]),
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      let activeCall = null;
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        // Ցույց տալ միայն եթե ընտրված է այն օգտատերը, ով զանգում է, կամ եթե ընդհանուր չատում չենք
+        if (selectedUser !== "general" && data.caller === selectedUser.uid) {
+          activeCall = { id: docSnap.id, data };
+        }
+      });
+      setIncomingCall(activeCall);
+    });
+
+    return () => unsub();
+  }, [selectedUser]);
+
+  useEffect(() => {
+    if (!selectedUser) return;
 
     let q;
-
     if (selectedUser === "general") {
-      // Եթե ընտրված է ընդհանուր չատը
       q = query(collection(db, "messages"), orderBy("createdAtMs", "asc"));
     } else {
-      // Եթե ընտրված է անձնական չատ
+      if (!auth.currentUser) return;
       const currentUid = auth.currentUser.uid;
       const targetUid = selectedUser.uid;
       const chatId = [currentUid, targetUid].sort().join("_");
-
       q = query(
         collection(db, "chats", chatId, "messages"),
         orderBy("createdAtMs", "asc"),
@@ -65,32 +90,26 @@ const Chat = () => {
     return () => unsubscribe();
   }, [selectedUser]);
 
-  // Scroll to bottom when messages update
   useEffect(() => {
-    const id = setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 50);
-    return () => clearTimeout(id);
-  }, [messages]);
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
+    }
+  }, [messages.length, selectedUser]);
 
-  // Ensure scroll to bottom when switching chats
-  useEffect(() => {
-    setTimeout(
-      () => messagesEndRef.current?.scrollIntoView({ behavior: "auto" }),
-      0,
-    );
-  }, [selectedUser]);
-
-  // 3. Հաղորդագրություն ուղարկելը
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (newMessage.trim() === "" || !selectedUser) return;
+
+    if (!auth.currentUser) {
+      alert("Նամակ գրելու համար խնդրում ենք մուտք գործել կամ գրանցվել:");
+      return;
+    }
 
     const { uid, displayName, photoURL } = auth.currentUser;
 
     try {
       if (selectedUser === "general") {
-        // Ուղարկում ենք ընդհանուր չատին
         await addDoc(collection(db, "messages"), {
           text: newMessage,
           name: displayName || "Անանուն",
@@ -100,11 +119,7 @@ const Chat = () => {
           createdAtMs: Date.now(),
         });
       } else {
-        // Ուղարկում ենք անձնական չատին
-        const currentUid = uid;
-        const targetUid = selectedUser.uid;
-        const chatId = [currentUid, targetUid].sort().join("_");
-
+        const chatId = [uid, selectedUser.uid].sort().join("_");
         await addDoc(collection(db, "chats", chatId, "messages"), {
           text: newMessage,
           name: displayName || "Անանուն",
@@ -114,7 +129,6 @@ const Chat = () => {
           createdAtMs: Date.now(),
         });
       }
-
       setNewMessage("");
     } catch (error) {
       console.error("Հաղորդագրությունը չուղարկվեց՝", error);
@@ -122,173 +136,254 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 items-center justify-center p-4">
-      <div className="w-full max-w-[900px] bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-row h-[80vh]">
-        {/* ՁԱԽ ՊԱՆԵԼ: Չատեր և Օգտատերեր */}
-        <div className="w-[280px] border-r border-gray-100 flex flex-col bg-white rounded-l-2xl">
-          <div className="p-4 border-b border-gray-100 bg-gray-50 rounded-tl-2xl">
-            <h2 className="text-gray-800 text-lg font-bold">Չատեր</h2>
+    <div className="flex flex-col h-[100dvh] bg-gradient-to-br from-gray-50 to-gray-100 md:items-center md:justify-center md:p-6 overflow-hidden">
+      <div className="w-full max-w-5xl bg-white md:rounded-3xl shadow-xl shadow-gray-200/50 md:border border-gray-100 flex flex-row h-full md:h-[85vh] overflow-hidden">
+        {/* ՁԱԽ ՊԱՆԵԼ: Օգտատերերի ցանկ */}
+        <div className="w-[300px] border-r border-gray-100 flex flex-col bg-white">
+          <div className="p-5 border-b border-gray-100 bg-white">
+            <h2 className="text-gray-900 text-xl font-bold tracking-tight">
+              Չատեր
+            </h2>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {/* ԿՈՃԱԿ: Ընդհանուր չատ */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-1">
+            {/* Ընդհանուր չատ */}
             <div
               onClick={() => setSelectedUser("general")}
-              className={`flex items-center gap-3 p-3 rounded-xl transition cursor-pointer ${
+              className={`flex items-center gap-4 p-3 rounded-2xl transition-all duration-200 cursor-pointer ${
                 selectedUser === "general"
-                  ? "bg-orange-50 border border-orange-100"
-                  : "hover:bg-gray-50 border border-transparent"
+                  ? "bg-gradient-to-r from-orange-50 to-orange-100/50 shadow-sm"
+                  : "hover:bg-gray-50"
               }`}
             >
-              <div className="w-10 h-10 rounded-full bg-[#ff9f43] flex items-center justify-center text-white font-bold shadow-sm text-lg">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-bold shadow-md text-xl">
                 #
               </div>
               <div className="flex flex-col">
                 <span
-                  className={`text-sm font-bold ${selectedUser === "general" ? "text-[#ff9f43]" : "text-gray-700"}`}
+                  className={`text-base font-bold ${selectedUser === "general" ? "text-orange-600" : "text-gray-800"}`}
                 >
                   Ընդհանուր չատ
                 </span>
-                <span className="text-xs text-gray-400">Հանրային սենյակ</span>
+                <span className="text-xs text-gray-500">Հանրային սենյակ</span>
               </div>
             </div>
 
-            {/* Բաժանարար գիծ */}
-            <div className="border-t border-gray-100 my-2 pt-2">
-              <span className="text-xs font-semibold text-gray-400 px-2 uppercase tracking-wider">
+            <div className="py-2">
+              <span className="text-[11px] font-bold text-gray-400 px-3 uppercase tracking-wider">
                 Օգտատերեր
               </span>
             </div>
 
-            {/* Անձնական չատերի ցուցակ */}
+            {/* Անձնական չատեր */}
             {users.length > 0 ? (
               users.map((user) => (
                 <div
                   key={user.id || user.uid}
                   onClick={() => setSelectedUser(user)}
-                  className={`flex items-center gap-3 p-3 rounded-xl transition cursor-pointer ${
+                  className={`flex items-center gap-4 p-3 rounded-2xl transition-all duration-200 cursor-pointer ${
                     selectedUser?.uid === user.uid
-                      ? "bg-orange-50 border border-orange-100"
-                      : "hover:bg-gray-50 border border-transparent"
+                      ? "bg-gradient-to-r from-orange-50 to-orange-100/50 shadow-sm"
+                      : "hover:bg-gray-50"
                   }`}
                 >
-                  <img
-                    src={user.avatar || "https://via.placeholder.com/40"}
-                    alt="avatar"
-                    className="w-10 h-10 rounded-full object-cover shadow-sm"
-                  />
+                  <div className="relative">
+                    <img
+                      src={user.avatar || "https://via.placeholder.com/40"}
+                      alt="avatar"
+                      className="w-12 h-12 rounded-full object-cover shadow-sm border border-gray-100"
+                    />
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                  </div>
                   <div className="flex flex-col">
                     <span
-                      className={`text-sm font-semibold ${selectedUser?.uid === user.uid ? "text-[#ff9f43]" : "text-gray-700"}`}
+                      className={`text-sm font-bold ${selectedUser?.uid === user.uid ? "text-orange-600" : "text-gray-800"}`}
                     >
                       {user.name || "Անանուն"}
                     </span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-500 truncate max-w-[120px]">
                       Անձնական նամակ
                     </span>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-gray-400 text-center mt-4">
-                Այլ օգտատերեր չկան
+              <p className="text-sm text-gray-400 text-center mt-6">
+                Օգտատերեր չկան
               </p>
             )}
           </div>
         </div>
 
         {/* ԱՋ ՊԱՆԵԼ: Չատի հատված */}
-        <div className="flex-1 flex flex-col bg-gray-50/30 rounded-r-2xl">
-          {/* Չատի վերնագիր (Փոխվում է ըստ ընտրության) */}
-          <div className="p-4 border-b border-gray-100 bg-[#ff9f43] rounded-tr-2xl flex items-center gap-3">
+        <div className="flex-1 flex flex-col bg-[#f8f9fa] relative">
+          {/* Վերնագիր */}
+          <div className="p-4 border-b border-gray-200 bg-white/80 backdrop-blur-md flex items-center gap-4 z-10 absolute top-0 w-full shadow-sm">
             {selectedUser === "general" ? (
               <>
-                <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg border border-white/40">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
                   #
                 </div>
-                <h2 className="text-white text-lg font-bold">Ընդհանուր չատ</h2>
+                <h2 className="text-gray-900 text-lg font-bold">
+                  Ընդհանուր չատ
+                </h2>
               </>
             ) : (
               <>
                 <img
                   src={selectedUser.avatar || "https://via.placeholder.com/40"}
                   alt="avatar"
-                  className="w-9 h-9 rounded-full object-cover border-2 border-white"
+                  className="w-10 h-10 rounded-full object-cover shadow-sm border border-gray-200"
                 />
-                <h2 className="text-white text-lg font-bold">
-                  {selectedUser.name}
-                </h2>
+                <div>
+                  <h2 className="text-gray-900 text-base font-bold leading-tight">
+                    {selectedUser.name}
+                  </h2>
+                  <span className="text-xs text-green-500 font-medium">
+                    Առցանց
+                  </span>
+                </div>
+
+                {/* Զանգի կոճակ (Գեղեցկացված) */}
+                <button
+                  onClick={async () => {
+                    if (!auth.currentUser) return;
+                    const callRef = doc(collection(db, "calls"));
+                    setOutgoingCallId(callRef.id);
+                  }}
+                  className="ml-auto flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-xl hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 transform active:scale-95 font-medium"
+                >
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57-.35-.11-.74-.03-1.02.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1C8.7 6.45 8.5 5.25 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1zM19 12h2a9 9 0 0 0-9-9v2c3.87 0 7 3.13 7 7zm-4 0h2c0-2.76-2.24-5-5-5v2c1.66 0 3 1.34 3 3z" />
+                  </svg>
+                  Զանգել
+                </button>
               </>
             )}
           </div>
 
-          {/* Հաղորդագրություններ */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-4">
+          {/* Նամակներ */}
+          <div
+            ref={chatContainerRef}
+            className="flex-1 p-6 overflow-y-auto space-y-6 pt-24 pb-20"
+          >
             {messages.length > 0 ? (
-              messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.uid === auth.currentUser?.uid ? "justify-end" : "justify-start"}`}
-                >
+              messages.map((msg) => {
+                const isMine = msg.uid === auth.currentUser?.uid;
+                return (
                   <div
-                    className={`flex gap-3 max-w-[70%] ${msg.uid === auth.currentUser?.uid ? "flex-row-reverse" : "flex-row"}`}
+                    key={msg.id}
+                    className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                   >
-                    <img
-                      src={msg.avatar || "https://via.placeholder.com/40"}
-                      alt="avatar"
-                      className="w-10 h-10 rounded-full object-cover shadow-sm"
-                    />
                     <div
-                      className={`flex flex-col ${msg.uid === auth.currentUser?.uid ? "items-end" : "items-start"}`}
+                      className={`flex gap-3 max-w-[75%] ${isMine ? "flex-row-reverse" : "flex-row"}`}
                     >
-                      <span className="text-xs text-gray-500 mb-1">
-                        {msg.name}
-                      </span>
+                      {!isMine && (
+                        <img
+                          src={msg.avatar || "https://via.placeholder.com/40"}
+                          alt="avatar"
+                          className="w-8 h-8 rounded-full object-cover shadow-sm self-end mb-1"
+                        />
+                      )}
                       <div
-                        className={`px-4 py-2 rounded-2xl shadow-sm ${
-                          msg.uid === auth.currentUser?.uid
-                            ? "bg-[#ff9f43] text-white rounded-tr-none"
-                            : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
-                        }`}
+                        className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}
                       >
-                        {msg.text}
+                        {!isMine && (
+                          <span className="text-[11px] text-gray-500 mb-1 ml-1">
+                            {msg.name}
+                          </span>
+                        )}
+                        <div
+                          className={`px-5 py-3 shadow-sm text-[15px] leading-relaxed ${
+                            isMine
+                              ? "bg-gradient-to-br from-orange-400 to-orange-500 text-white rounded-3xl rounded-br-sm"
+                              : "bg-white border border-gray-100 text-gray-800 rounded-3xl rounded-bl-sm"
+                          }`}
+                        >
+                          {msg.text}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <div className="text-center text-gray-400 text-sm mt-10">
-                Նամակագրությունը դատարկ է:
+              <div className="flex flex-col items-center justify-center h-full opacity-50">
+                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                  <svg
+                    className="w-10 h-10 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    ></path>
+                  </svg>
+                </div>
+                <p className="text-gray-500 font-medium">
+                  Նամակագրությունը դատարկ է
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Ուղարկեք առաջին նամակը
+                </p>
               </div>
             )}
-            <div ref={messagesEndRef} />
           </div>
 
-          {/* Տեքստի ներմուծման դաշտ */}
+          {/* Տեքստի մուտքագրում */}
           <form
             onSubmit={handleSubmit}
-            className="p-4 border-t border-gray-100 flex gap-2 bg-white rounded-br-2xl"
+            className="p-4 border-t border-gray-200 bg-white/80 backdrop-blur-md absolute bottom-0 w-full flex gap-3 items-center z-10"
           >
             <input
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder={
-                selectedUser === "general"
-                  ? "Գրել ընդհանուր չատում..."
-                  : `Գրել ${selectedUser.name}-ին...`
+                !auth.currentUser
+                  ? "Մուտք գործեք նամակ գրելու համար..."
+                  : selectedUser === "general"
+                    ? "Գրել ընդհանուր չատում..."
+                    : `Գրել ${selectedUser.name}-ին...`
               }
-              className="flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 outline-none transition focus:border-[#ff9f43] focus:bg-white"
+              disabled={!auth.currentUser}
+              className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-5 py-3 outline-none transition-all focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-50 disabled:opacity-50 text-gray-700"
             />
             <button
               type="submit"
-              className="bg-[#ff9f43] text-white px-6 py-2 rounded-full font-medium shadow-md hover:bg-[#f08f33] transition"
+              disabled={!auth.currentUser}
+              className="bg-gradient-to-r from-orange-400 to-orange-500 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:hover:translate-y-0"
             >
               Ուղարկել
             </button>
           </form>
         </div>
+
+        {/* ԶԱՆԳԻ ՎԻՋԵԹՆԵՐԸ */}
+        {outgoingCallId && selectedUser !== "general" && (
+          <Call
+            mode="offer"
+            callId={outgoingCallId}
+            caller={auth.currentUser}
+            callee={selectedUser}
+            onClose={() => setOutgoingCallId(null)}
+          />
+        )}
+
+        {incomingCall && (
+          <Call
+            mode="answer"
+            callId={incomingCall.id}
+            caller={{ uid: incomingCall.data.caller, name: "Ներգնա Զանգ" }} // name-ը կարող ես փոխել իրականով
+            callee={auth.currentUser}
+            onClose={() => setIncomingCall(null)}
+          />
+        )}
       </div>
     </div>
   );
