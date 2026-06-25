@@ -216,9 +216,9 @@ const Chat = () => {
         </div>
 
         {/* ԱՋ ՊԱՆԵԼ: Չատի հատված */}
-        <div className="flex-1 flex flex-col bg-[#f8f9fa] relative">
+        <div className="flex-1 flex flex-col bg-[#f8f9fa] overflow-hidden">
           {/* Վերնագիր */}
-          <div className="p-4 border-b border-gray-200 bg-white/80 backdrop-blur-md flex items-center gap-4 z-10 absolute top-0 w-full shadow-sm">
+          <div className="p-3 sm:p-4 border-b border-gray-200 bg-white/80 backdrop-blur-md flex items-center gap-3 sm:gap-4 z-10 sticky top-0 w-full shadow-sm flex-shrink-0">
             {selectedUser === "general" ? (
               <>
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
@@ -266,7 +266,7 @@ const Chat = () => {
           {/* Նամակներ */}
           <div
             ref={chatContainerRef}
-            className="flex-1 p-3 sm:p-6 overflow-y-auto space-y-3 sm:space-y-6 pt-20 sm:pt-24 pb-24 sm:pb-20"
+            className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 space-y-3 sm:space-y-4 scroll-smooth"
           >
             {messages.length > 0 ? (
               messages.map((msg) => {
@@ -339,7 +339,7 @@ const Chat = () => {
           {/* Տեքստի մուտքագրում */}
           <form
             onSubmit={handleSubmit}
-            className="p-3 sm:p-4 border-t border-gray-200 bg-white/80 backdrop-blur-md sticky bottom-0 w-full flex gap-2 sm:gap-3 items-center z-10"
+            className="p-3 sm:p-4 border-t border-gray-200 bg-white/80 backdrop-blur-md flex gap-2 sm:gap-3 items-center z-10 flex-shrink-0"
           >
             <input
               type="text"
