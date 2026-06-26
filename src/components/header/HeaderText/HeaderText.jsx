@@ -4,9 +4,13 @@ import Img from "../../../assets/logo (1).svg";
 
 const HeaderText = () => {
   return (
-    <div className="flex items-center gap-[45px]">
-      <Link className="mr-60" to="/">
-        <img className="ml-13 h-[45px] object-contain" src={Img} alt="Logo" />
+    <div className="hidden lg:flex items-center gap-[45px]">
+      <Link className="mr-10 xl:mr-60" to="/">
+        <img
+          className="ml-0 xl:ml-13 h-[45px] object-contain"
+          src={Img}
+          alt="Logo"
+        />
       </Link>
 
       <Link to="/">

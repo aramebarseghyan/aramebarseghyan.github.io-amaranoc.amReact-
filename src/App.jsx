@@ -28,6 +28,7 @@ function App() {
         console.error("Redirect sign-in error:", error);
       });
   }, []);
+
   return (
     <BrowserRouter>
       <div className="w-full min-h-screen text-[#1a1a1a]">
@@ -37,8 +38,8 @@ function App() {
           <Route
             path="/"
             element={
-              <div className="max-w-[1320px] mx-auto px-[15px] xl:px-[20px] flex items-start gap-[30px] mt-[30px] mb-[50px]">
-                <div className="flex-shrink-0 w-[280px]">
+              <div className="max-w-[1320px] mx-auto px-[15px] xl:px-[20px] flex flex-col lg:flex-row items-start gap-5 lg:gap-[30px] mt-[30px] mb-[50px]">
+                <div className="w-full lg:w-[280px] flex-shrink-0">
                   <Aside />
                 </div>
                 <div className="flex-1 w-full overflow-hidden">

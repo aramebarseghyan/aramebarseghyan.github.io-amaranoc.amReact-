@@ -11,17 +11,22 @@ import {
   doc,
 } from "firebase/firestore";
 import Call from "./Call";
+import VideoCall from "./VideoCall";
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState("general");
+
+  // Զանգերի State-ներ
   const [outgoingCallId, setOutgoingCallId] = useState(null);
+  const [outgoingVideoCallId, setOutgoingVideoCallId] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
 
   const chatContainerRef = useRef(null);
 
+  // Ստանալ օգտատերերին
   useEffect(() => {
     const q = query(collection(db, "users"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -34,11 +39,10 @@ const Chat = () => {
       });
       setUsers(usersList);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // ✨ ՈՒՂՂՎԱԾ Է. Հիմա ցույց կտա և՛ զանգի պահը, և՛ խոսելու պահը, մինչև status-ը չդառնա ended
+  // Ստուգել ներգնա զանգերը
   useEffect(() => {
     if (!auth.currentUser) return;
     const q = query(
@@ -51,7 +55,6 @@ const Chat = () => {
       let activeCall = null;
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        // Ցույց տալ միայն եթե ընտրված է այն օգտատերը, ով զանգում է, կամ եթե ընդհանուր չատում չենք
         if (selectedUser !== "general" && data.caller === selectedUser.uid) {
           activeCall = { id: docSnap.id, data };
         }
@@ -62,9 +65,9 @@ const Chat = () => {
     return () => unsub();
   }, [selectedUser]);
 
+  // Ստանալ նամակները
   useEffect(() => {
     if (!selectedUser) return;
-
     let q;
     if (selectedUser === "general") {
       q = query(collection(db, "messages"), orderBy("createdAtMs", "asc"));
@@ -90,6 +93,7 @@ const Chat = () => {
     return () => unsubscribe();
   }, [selectedUser]);
 
+  // Ավտոմատ իջնել ներքև
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop =
@@ -97,17 +101,16 @@ const Chat = () => {
     }
   }, [messages.length, selectedUser]);
 
+  // Ուղարկել նամակ
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (newMessage.trim() === "" || !selectedUser) return;
-
     if (!auth.currentUser) {
-      alert("Նամակ գրելու համար խնդրում ենք մուտք գործել կամ գրանցվել:");
+      alert("Նամակ գրելու համար խնդրում ենք մուտք գործել:");
       return;
     }
 
     const { uid, displayName, photoURL } = auth.currentUser;
-
     try {
       if (selectedUser === "general") {
         await addDoc(collection(db, "messages"), {
@@ -138,16 +141,14 @@ const Chat = () => {
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 md:items-center md:justify-center md:p-6 overflow-hidden">
       <div className="w-full max-w-6xl bg-white md:rounded-3xl shadow-xl shadow-gray-200/50 md:border border-gray-100 flex flex-row h-full md:h-[85vh] overflow-hidden">
-        {/* ՁԱԽ ՊԱՆԵԼ: Օգտատերերի ցանկ */}
+        {/* ՁԱԽ ՊԱՆԵԼ */}
         <div className="hidden sm:flex w-full sm:w-64 md:w-80 border-r border-gray-100 flex-col bg-white overflow-hidden">
           <div className="p-4 sm:p-5 border-b border-gray-100 bg-white">
             <h2 className="text-gray-900 text-lg sm:text-xl font-bold tracking-tight">
               Չատեր
             </h2>
           </div>
-
           <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-1">
-            {/* Ընդհանուր չատ */}
             <div
               onClick={() => setSelectedUser("general")}
               className={`flex items-center gap-4 p-3 rounded-2xl transition-all duration-200 cursor-pointer ${
@@ -175,7 +176,6 @@ const Chat = () => {
               </span>
             </div>
 
-            {/* Անձնական չատեր */}
             {users.length > 0 ? (
               users.map((user) => (
                 <div
@@ -215,9 +215,9 @@ const Chat = () => {
           </div>
         </div>
 
-        {/* ԱՋ ՊԱՆԵԼ: Չատի հատված */}
+        {/* ԱՋ ՊԱՆԵԼ */}
         <div className="flex-1 flex flex-col bg-[#f8f9fa] overflow-hidden">
-          {/* Վերնագիր */}
+          {/* Վերնագիր և Զանգի կոճակներ */}
           <div className="p-3 sm:p-4 border-b border-gray-200 bg-white/80 backdrop-blur-md flex items-center gap-3 sm:gap-4 z-10 sticky top-0 w-full shadow-sm flex-shrink-0">
             {selectedUser === "general" ? (
               <>
@@ -235,7 +235,7 @@ const Chat = () => {
                   alt="avatar"
                   className="w-10 h-10 rounded-full object-cover shadow-sm border border-gray-200"
                 />
-                <div>
+                <div className="flex-1">
                   <h2 className="text-gray-900 text-base font-bold leading-tight">
                     {selectedUser.name}
                   </h2>
@@ -244,29 +244,51 @@ const Chat = () => {
                   </span>
                 </div>
 
-                {/* Զանգի կոճակ (Գեղեցկացված) */}
-                <button
-                  onClick={async () => {
-                    if (!auth.currentUser) return;
-                    const callRef = doc(collection(db, "calls"));
-                    setOutgoingCallId(callRef.id);
-                  }}
-                  className="ml-auto flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 transform active:scale-95 font-medium text-sm sm:text-base"
-                  title="Զանգել"
-                >
-                  <svg className="w-4 h-4 fill-current flex-shrink-0" viewBox="0 0 24 24">
-                    <path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57-.35-.11-.74-.03-1.02.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1C8.7 6.45 8.5 5.25 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1zM19 12h2a9 9 0 0 0-9-9v2c3.87 0 7 3.13 7 7zm-4 0h2c0-2.76-2.24-5-5-5v2c1.66 0 3 1.34 3 3z" />
-                  </svg>
-                  <span className="hidden sm:inline">Զանգել</span>
-                </button>
+                <div className="flex gap-2">
+                  {/* ԱՈՒԴԻՈ ԶԱՆԳԻ ԿՈՃԱԿ */}
+                  <button
+                    onClick={() => {
+                      if (!auth.currentUser) return;
+                      const callRef = doc(collection(db, "calls"));
+                      setOutgoingCallId(callRef.id);
+                    }}
+                    className="flex items-center gap-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white w-10 h-10 sm:w-auto sm:px-4 sm:py-2 rounded-full sm:rounded-xl hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 transform active:scale-95 justify-center"
+                    title="Աուդիո զանգ"
+                  >
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57-.35-.11-.74-.03-1.02.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1C8.7 6.45 8.5 5.25 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1zM19 12h2a9 9 0 0 0-9-9v2c3.87 0 7 3.13 7 7zm-4 0h2c0-2.76-2.24-5-5-5v2c1.66 0 3 1.34 3 3z" />
+                    </svg>
+                    <span className="hidden sm:inline font-medium text-sm">
+                      Զանգ
+                    </span>
+                  </button>
+
+                  {/* ՎԻԴԵՈ ԶԱՆԳԻ ԿՈՃԱԿ */}
+                  <button
+                    onClick={() => {
+                      if (!auth.currentUser) return;
+                      const callRef = doc(collection(db, "calls"));
+                      setOutgoingVideoCallId(callRef.id);
+                    }}
+                    className="flex items-center gap-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white w-10 h-10 sm:w-auto sm:px-4 sm:py-2 rounded-full sm:rounded-xl hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform active:scale-95 justify-center"
+                    title="Վիդեո զանգ"
+                  >
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
+                    </svg>
+                    <span className="hidden sm:inline font-medium text-sm">
+                      Վիդեո
+                    </span>
+                  </button>
+                </div>
               </>
             )}
           </div>
 
-          {/* Նամակներ */}
+          {/* Նամակների Դաշտ */}
           <div
             ref={chatContainerRef}
-            className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 space-y-3 sm:space-y-4 scroll-smooth"
+            className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 scroll-smooth"
           >
             {messages.length > 0 ? (
               messages.map((msg) => {
@@ -310,33 +332,14 @@ const Chat = () => {
               })
             ) : (
               <div className="flex flex-col items-center justify-center h-full opacity-50">
-                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                  <svg
-                    className="w-10 h-10 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                    ></path>
-                  </svg>
-                </div>
                 <p className="text-gray-500 font-medium">
                   Նամակագրությունը դատարկ է
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Ուղարկեք առաջին նամակը
                 </p>
               </div>
             )}
           </div>
 
-          {/* Տեքստի մուտքագրում */}
+          {/* Մուտքագրում */}
           <form
             onSubmit={handleSubmit}
             className="p-3 sm:p-4 border-t border-gray-200 bg-white/80 backdrop-blur-md flex gap-2 sm:gap-3 items-center z-10 flex-shrink-0"
@@ -345,28 +348,23 @@ const Chat = () => {
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder={
-                !auth.currentUser
-                  ? "Մուտք գործեք..."
-                  : selectedUser === "general"
-                    ? "Գրել չատում..."
-                    : `Գրել ${selectedUser.name}-ին...`
-              }
+              placeholder="Գրեք նամակ..."
               disabled={!auth.currentUser}
-              className="flex-1 rounded-xl sm:rounded-2xl border border-gray-200 bg-gray-50 px-4 sm:px-5 py-2 sm:py-3 outline-none transition-all focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-50 disabled:opacity-50 text-sm sm:text-base text-gray-700"
+              className="flex-1 rounded-xl sm:rounded-2xl border border-gray-200 bg-gray-50 px-4 sm:px-5 py-2 sm:py-3 outline-none focus:border-orange-400 focus:bg-white text-sm sm:text-base"
             />
             <button
               type="submit"
               disabled={!auth.currentUser}
-              className="bg-gradient-to-r from-orange-400 to-orange-500 text-white px-4 sm:px-8 py-2 sm:py-3 rounded-lg sm:rounded-2xl font-bold shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:hover:translate-y-0 text-sm sm:text-base flex-shrink-0"
+              className="bg-gradient-to-r from-orange-400 to-orange-500 text-white px-4 sm:px-8 py-2 sm:py-3 rounded-lg sm:rounded-2xl font-bold shadow-lg shadow-orange-500/30 text-sm sm:text-base"
             >
-              <span className="hidden sm:inline">Ուղարկել</span>
-              <span className="sm:hidden">→</span>
+              Ուղարկել
             </button>
           </form>
         </div>
 
-        {/* ԶԱՆԳԻ ՎԻՋԵԹՆԵՐԸ */}
+        {/* --- ԶԱՆԳԻ ՎԻՋԵԹՆԵՐ --- */}
+
+        {/* Ելքային Աուդիո Զանգ */}
         {outgoingCallId && selectedUser !== "general" && (
           <Call
             mode="offer"
@@ -377,11 +375,33 @@ const Chat = () => {
           />
         )}
 
-        {incomingCall && (
+        {/* Ելքային Վիդեո Զանգ */}
+        {outgoingVideoCallId && selectedUser !== "general" && (
+          <VideoCall
+            mode="offer"
+            callId={outgoingVideoCallId}
+            caller={auth.currentUser}
+            callee={selectedUser}
+            onClose={() => setOutgoingVideoCallId(null)}
+          />
+        )}
+
+        {/* Ներգնա Զանգեր (Աուդիո կամ Վիդեո) */}
+        {incomingCall && incomingCall.data.type === "audio" && (
           <Call
             mode="answer"
             callId={incomingCall.id}
-            caller={{ uid: incomingCall.data.caller, name: "Ներգնա Զանգ" }} // name-ը կարող ես փոխել իրականով
+            caller={{ uid: incomingCall.data.caller, name: "Ներգնա Զանգ" }}
+            callee={auth.currentUser}
+            onClose={() => setIncomingCall(null)}
+          />
+        )}
+
+        {incomingCall && incomingCall.data.type === "video" && (
+          <VideoCall
+            mode="answer"
+            callId={incomingCall.id}
+            caller={{ uid: incomingCall.data.caller, name: "Ներգնա Վիդեոզանգ" }}
             callee={auth.currentUser}
             onClose={() => setIncomingCall(null)}
           />

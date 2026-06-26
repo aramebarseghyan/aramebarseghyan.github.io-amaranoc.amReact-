@@ -60,7 +60,7 @@ const House = () => {
         <Link
           to={`/house/${house.id}`}
           key={house.id}
-          className="w-[calc((100%-40px)/3)] flex flex-col rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] bg-white transition-transform duration-200 hover:scale-[1.02]"
+          className="w-full sm:w-[calc((100%-20px)/2)] lg:w-[calc((100%-40px)/3)] flex flex-col rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] bg-white transition-transform duration-200 hover:scale-[1.02]"
         >
           <img
             src={house.image}

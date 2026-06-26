@@ -4,8 +4,10 @@ const Arajark = ({ className }) => {
   const [activeId, setActiveId] = useState(1);
 
   return (
-    <div  className={` ml-5 flex justify-between items-center w-full ${className || ""}`}>
-      <h3 className="font-sans text-xl font-bold text-[#222]">
+    <div
+      className={`ml-0 md:ml-5 flex justify-between items-center w-full ${className || ""}`}
+    >
+      <h3 className="font-sans text-lg sm:text-xl font-bold text-[#222]">
         Լավագույն առաջարկներ
       </h3>
 
@@ -40,7 +42,7 @@ const Arajark = ({ className }) => {
           />
         </div>
       </div>
-    </div>  
+    </div>
   );
 };
 

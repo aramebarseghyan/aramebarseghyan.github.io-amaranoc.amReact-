@@ -4,7 +4,7 @@ import Houses from "./Houses/Houses";
 
 const Main = () => {
   return (
-    <div className=" flex flex-col w-full p-5 mt-5 gap-6">
+    <div className="flex flex-col w-full p-2 sm:p-5 mt-5 gap-6">
       <MapsData />
       <Icons />
       <Houses />
