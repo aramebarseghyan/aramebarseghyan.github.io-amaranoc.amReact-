@@ -170,6 +170,7 @@ export default function VideoCall({ mode, callId, caller, callee, onClose }) {
         ) : (
           <button onClick={hangup} className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full">✗</button>
         )}
+        
       </div>
     </div>
   );
