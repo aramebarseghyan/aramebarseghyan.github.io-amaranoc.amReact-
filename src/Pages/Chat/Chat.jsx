@@ -12,6 +12,7 @@ import {
   serverTimestamp,
   doc,
   setDoc,
+  deleteDoc, // ԱՎԵԼԱՑՎԵԼ Է՝ ջնջելու ֆունկցիան
 } from "firebase/firestore";
 import Call from "./Call";
 import VideoCall from "./VideoCall";
@@ -31,10 +32,10 @@ const Chat = () => {
 
   // Ձայնային նամակների State-ներ
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0); // Ժամաչափ
+  const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-  const isCancelledRef = useRef(false); // Չեղարկման կարգավիճակ
+  const isCancelledRef = useRef(false);
 
   const chatContainerRef = useRef(null);
 
@@ -190,6 +191,24 @@ const Chat = () => {
       setNewMessage("");
     } catch (error) {
       console.error("Հաղորդագրությունը չուղարկվեց՝", error);
+    }
+  };
+
+  // --- ՆՈՐ ՖՈՒՆԿՑԻԱ՝ Նամակը ջնջելու համար ---
+  const deleteMessage = async (msgId) => {
+    const confirmDelete = window.confirm(
+      "Վստա՞հ եք, որ ուզում եք ջնջել այս նամակը:",
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const messagesCollection = getMessagesCollection(selectedUser);
+      if (!messagesCollection) return;
+
+      // Ջնջում ենք նամակը բազայից ըստ իր ID-ի
+      await deleteDoc(doc(messagesCollection, msgId));
+    } catch (error) {
+      console.error("Սխալ նամակը ջնջելիս՝", error);
     }
   };
 
@@ -449,6 +468,7 @@ const Chat = () => {
                           className="w-8 h-8 rounded-full object-cover shadow-sm self-end mb-1"
                         />
                       )}
+
                       <div
                         className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}
                       >
@@ -457,22 +477,44 @@ const Chat = () => {
                             {msg.name}
                           </span>
                         )}
+
+                        {/* Փաթեթավորում ենք նամակը և ջնջելու կոճակը՝ կողք-կողքի դնելու համար */}
                         <div
-                          className={`px-4 py-2 sm:px-5 sm:py-3 shadow-sm text-[15px] leading-relaxed ${
-                            isMine
-                              ? "bg-gradient-to-br from-orange-400 to-orange-500 text-white rounded-3xl rounded-br-sm"
-                              : "bg-white border border-gray-100 text-gray-800 rounded-3xl rounded-bl-sm"
-                          }`}
+                          className={`flex items-center gap-2 group ${isMine ? "flex-row-reverse" : "flex-row"}`}
                         >
-                          {msg.text && <div>{msg.text}</div>}
-                          {msg.audio && (
-                            <div className="flex items-center gap-2 mt-1">
-                              <audio
-                                controls
-                                src={msg.audio}
-                                className="h-8 max-w-[200px] outline-none"
-                              />
-                            </div>
+                          <div
+                            className={`px-4 py-2 sm:px-5 sm:py-3 shadow-sm text-[15px] leading-relaxed ${
+                              isMine
+                                ? "bg-gradient-to-br from-orange-400 to-orange-500 text-white rounded-3xl rounded-br-sm"
+                                : "bg-white border border-gray-100 text-gray-800 rounded-3xl rounded-bl-sm"
+                            }`}
+                          >
+                            {msg.text && <div>{msg.text}</div>}
+                            {msg.audio && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <audio
+                                  controls
+                                  src={msg.audio}
+                                  className="h-8 max-w-[200px] outline-none"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* ՋՆՋԵԼՈՒ ԿՈՃԱԿԸ - Երևում է միայն քո նամակների վրա */}
+                          {isMine && (
+                            <button
+                              onClick={() => deleteMessage(msg.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 p-1 bg-white rounded-full shadow-sm border border-gray-100"
+                              title="Ջնջել նամակը"
+                            >
+                              <svg
+                                className="w-4 h-4 fill-current"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                              </svg>
+                            </button>
                           )}
                         </div>
                       </div>
@@ -489,7 +531,7 @@ const Chat = () => {
             )}
           </div>
 
-          {/* ՄՈՒՏՔԱԳՐՈՒՄ - TELEGRAM ՈՃՈՎ */}
+          {/* ՄՈՒՏՔԱԳՐՈՒՄ */}
           <div className="p-3 sm:p-4 border-t border-gray-200 bg-white/80 backdrop-blur-md flex flex-col gap-3 z-10 flex-shrink-0">
             <div className="flex items-center gap-2 relative">
               {isRecording ? (
