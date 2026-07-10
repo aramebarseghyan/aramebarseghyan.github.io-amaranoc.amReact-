@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import { Navigate } from "react-router-dom";
 import { auth, db } from "../../firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   collection,
   addDoc,
@@ -9,48 +11,87 @@ import {
   onSnapshot,
   serverTimestamp,
   doc,
+  setDoc,
 } from "firebase/firestore";
 import Call from "./Call";
 import VideoCall from "./VideoCall";
 
 const Chat = () => {
+  const [currentUser, setCurrentUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState("general");
+  const [authReady, setAuthReady] = useState(false);
 
   // Զանգերի State-ներ
   const [outgoingCallId, setOutgoingCallId] = useState(null);
   const [outgoingVideoCallId, setOutgoingVideoCallId] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
 
+  // Ձայնային նամակների State-ներ
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0); // Ժամաչափ
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const isCancelledRef = useRef(false); // Չեղարկման կարգավիճակ
+
   const chatContainerRef = useRef(null);
+
+  // Հետևել օգտատիրոջ մուտքին
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      setAuthReady(true);
+      if (user) {
+        await setDoc(
+          doc(db, "users", user.uid),
+          {
+            uid: user.uid,
+            name: user.displayName || user.email || "Անանուն",
+            email: user.email,
+            avatar: user.photoURL || "https://via.placeholder.com/40",
+            lastSeen: serverTimestamp(),
+          },
+          { merge: true },
+        );
+        setSelectedUser((prev) => (prev ? prev : "general"));
+      } else {
+        setMessages([]);
+        setSelectedUser("general");
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Ստանալ օգտատերերին
   useEffect(() => {
+    if (!authReady || !currentUser?.uid) {
+      setUsers([]);
+      return;
+    }
     const q = query(collection(db, "users"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let usersList = [];
-      snapshot.forEach((doc) => {
-        const userData = doc.data();
-        if (userData.uid !== auth.currentUser?.uid) {
-          usersList.push({ ...userData, id: doc.id });
+      snapshot.forEach((docSnap) => {
+        const userData = docSnap.data();
+        if (userData.uid !== currentUser?.uid) {
+          usersList.push({ ...userData, id: docSnap.id });
         }
       });
       setUsers(usersList);
     });
     return () => unsubscribe();
-  }, []);
+  }, [authReady, currentUser]);
 
   // Ստուգել ներգնա զանգերը
   useEffect(() => {
-    if (!auth.currentUser) return;
+    if (!currentUser) return;
     const q = query(
       collection(db, "calls"),
-      where("callee", "==", auth.currentUser.uid),
+      where("callee", "==", currentUser.uid),
       where("status", "in", ["ringing", "connected"]),
     );
-
     const unsub = onSnapshot(q, (snapshot) => {
       let activeCall = null;
       snapshot.forEach((docSnap) => {
@@ -61,27 +102,33 @@ const Chat = () => {
       });
       setIncomingCall(activeCall);
     });
-
     return () => unsub();
-  }, [selectedUser]);
+  }, [selectedUser, currentUser]);
+
+  const getChatId = (targetUser) => {
+    if (!currentUser?.uid || !targetUser?.uid) return null;
+    return [currentUser.uid, targetUser.uid].sort().join("_");
+  };
+
+  const getMessagesCollection = (targetUser) => {
+    if (targetUser === "general") return collection(db, "messages");
+    const chatId = getChatId(targetUser);
+    if (!chatId) return null;
+    return collection(db, "chats", chatId, "messages");
+  };
 
   // Ստանալ նամակները
   useEffect(() => {
     if (!selectedUser) return;
-    let q;
-    if (selectedUser === "general") {
-      q = query(collection(db, "messages"), orderBy("createdAtMs", "asc"));
-    } else {
-      if (!auth.currentUser) return;
-      const currentUid = auth.currentUser.uid;
-      const targetUid = selectedUser.uid;
-      const chatId = [currentUid, targetUid].sort().join("_");
-      q = query(
-        collection(db, "chats", chatId, "messages"),
-        orderBy("createdAtMs", "asc"),
-      );
+    const isGeneralChat = selectedUser === "general";
+    if (!isGeneralChat && !currentUser?.uid) {
+      setMessages([]);
+      return;
     }
+    const messagesCollection = getMessagesCollection(selectedUser);
+    if (!messagesCollection) return;
 
+    const q = query(messagesCollection, orderBy("createdAtMs", "asc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let msgs = [];
       snapshot.forEach((doc) => {
@@ -89,11 +136,10 @@ const Chat = () => {
       });
       setMessages(msgs);
     });
-
     return () => unsubscribe();
-  }, [selectedUser]);
+  }, [selectedUser, currentUser]);
 
-  // Ավտոմատ իջնել ներքև
+  // Ավտոմատ սքրոլ ներքև
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop =
@@ -101,47 +147,144 @@ const Chat = () => {
     }
   }, [messages.length, selectedUser]);
 
-  // Ուղարկել նամակ
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (newMessage.trim() === "" || !selectedUser) return;
-    if (!auth.currentUser) {
-      alert("Նամակ գրելու համար խնդրում ենք մուտք գործել:");
-      return;
+  // --- ՁԱՅՆԱԳՐՈՒԹՅԱՆ ԺԱՄԱՉԱՓ ---
+  useEffect(() => {
+    let interval;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setRecordingTime(0);
     }
+    return () => clearInterval(interval);
+  }, [isRecording]);
 
-    const { uid, displayName, photoURL } = auth.currentUser;
+  const formatTime = (time) => {
+    const mins = Math.floor(time / 60)
+      .toString()
+      .padStart(2, "0");
+    const secs = (time % 60).toString().padStart(2, "0");
+    return `${mins}:${secs}`;
+  };
+
+  // Ուղարկել տեքստ
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!newMessage.trim() || !selectedUser) return;
+    if (!currentUser?.uid) return;
+
+    const { uid, displayName, photoURL } = currentUser;
     try {
-      if (selectedUser === "general") {
-        await addDoc(collection(db, "messages"), {
-          text: newMessage,
-          name: displayName || "Անանուն",
-          avatar: photoURL || "https://via.placeholder.com/40",
-          uid: uid,
-          createdAt: serverTimestamp(),
-          createdAtMs: Date.now(),
-        });
-      } else {
-        const chatId = [uid, selectedUser.uid].sort().join("_");
-        await addDoc(collection(db, "chats", chatId, "messages"), {
-          text: newMessage,
-          name: displayName || "Անանուն",
-          avatar: photoURL || "https://via.placeholder.com/40",
-          uid: uid,
-          createdAt: serverTimestamp(),
-          createdAtMs: Date.now(),
-        });
-      }
+      const payload = {
+        text: newMessage.trim(),
+        name: displayName || "Անանուն",
+        avatar: photoURL || "https://via.placeholder.com/40",
+        uid,
+        createdAt: serverTimestamp(),
+        createdAtMs: Date.now(),
+      };
+      const messagesCollection = getMessagesCollection(selectedUser);
+      if (!messagesCollection) return;
+      await addDoc(messagesCollection, payload);
       setNewMessage("");
     } catch (error) {
       console.error("Հաղորդագրությունը չուղարկվեց՝", error);
     }
   };
 
+  // Սկսել ձայնագրումը
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      isCancelledRef.current = false;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        if (!isCancelledRef.current) {
+          const audioBlob = new Blob(audioChunksRef.current, {
+            type: "audio/webm",
+          });
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = async () => {
+            const base64Audio = reader.result;
+            await sendAudioMessage(base64Audio);
+          };
+        }
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Միկրոֆոնի սխալ:", error);
+      alert("Միկրոֆոնին միանալու խնդիր։ Ստուգեք թույլտվությունները։");
+    }
+  };
+
+  // Ավարտել և ուղարկել ձայնագրությունը
+  const stopAndSendRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      isCancelledRef.current = false;
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  // Չեղարկել ձայնագրությունը
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      isCancelledRef.current = true;
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  // Ուղարկել ձայնային հաղորդագրությունը
+  const sendAudioMessage = async (audioData) => {
+    if (!selectedUser || !currentUser?.uid) return;
+    const { uid, displayName, photoURL } = currentUser;
+    try {
+      const payload = {
+        text: "",
+        audio: audioData,
+        name: displayName || "Անանուն",
+        avatar: photoURL || "https://via.placeholder.com/40",
+        uid,
+        createdAt: serverTimestamp(),
+        createdAtMs: Date.now(),
+      };
+      const messagesCollection = getMessagesCollection(selectedUser);
+      if (!messagesCollection) return;
+      await addDoc(messagesCollection, payload);
+    } catch (error) {
+      console.error("Ձայնային հաղորդագրությունը չուղարկվեց՝", error);
+    }
+  };
+
+  if (!authReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+        <div className="rounded-2xl border border-gray-100 bg-white px-6 py-5 text-sm font-medium text-gray-600 shadow-sm">
+          Մուտք է գործում…
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) return <Navigate to="/login" replace />;
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 md:items-center md:justify-center md:p-6 overflow-hidden">
       <div className="w-full max-w-6xl bg-white md:rounded-3xl shadow-xl shadow-gray-200/50 md:border border-gray-100 flex flex-row h-full md:h-[85vh] overflow-hidden">
-        {/* ՁԱԽ ՊԱՆԵԼ */}
+        {/* ՁԱԽ ՊԱՆԵԼ (Օգտատերերի ցանկ) */}
         <div className="hidden sm:flex w-full sm:w-64 md:w-80 border-r border-gray-100 flex-col bg-white overflow-hidden">
           <div className="p-4 sm:p-5 border-b border-gray-100 bg-white">
             <h2 className="text-gray-900 text-lg sm:text-xl font-bold tracking-tight">
@@ -224,7 +367,7 @@ const Chat = () => {
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
                   #
                 </div>
-                <h2 className="text-gray-900 text-lg font-bold">
+                <h2 className="text-gray-900 text-lg font-bold flex-1">
                   Ընդհանուր չատ
                 </h2>
               </>
@@ -245,10 +388,9 @@ const Chat = () => {
                 </div>
 
                 <div className="flex gap-2">
-                  {/* ԱՈՒԴԻՈ ԶԱՆԳԻ ԿՈՃԱԿ */}
                   <button
                     onClick={() => {
-                      if (!auth.currentUser) return;
+                      if (!currentUser) return;
                       const callRef = doc(collection(db, "calls"));
                       setOutgoingCallId(callRef.id);
                     }}
@@ -263,10 +405,9 @@ const Chat = () => {
                     </span>
                   </button>
 
-                  {/* ՎԻԴԵՈ ԶԱՆԳԻ ԿՈՃԱԿ */}
                   <button
                     onClick={() => {
-                      if (!auth.currentUser) return;
+                      if (!currentUser) return;
                       const callRef = doc(collection(db, "calls"));
                       setOutgoingVideoCallId(callRef.id);
                     }}
@@ -292,14 +433,14 @@ const Chat = () => {
           >
             {messages.length > 0 ? (
               messages.map((msg) => {
-                const isMine = msg.uid === auth.currentUser?.uid;
+                const isMine = msg.uid === currentUser?.uid;
                 return (
                   <div
                     key={msg.id}
                     className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`flex gap-3 max-w-[75%] ${isMine ? "flex-row-reverse" : "flex-row"}`}
+                      className={`flex gap-3 max-w-[85%] sm:max-w-[75%] ${isMine ? "flex-row-reverse" : "flex-row"}`}
                     >
                       {!isMine && (
                         <img
@@ -317,13 +458,22 @@ const Chat = () => {
                           </span>
                         )}
                         <div
-                          className={`px-5 py-3 shadow-sm text-[15px] leading-relaxed ${
+                          className={`px-4 py-2 sm:px-5 sm:py-3 shadow-sm text-[15px] leading-relaxed ${
                             isMine
                               ? "bg-gradient-to-br from-orange-400 to-orange-500 text-white rounded-3xl rounded-br-sm"
                               : "bg-white border border-gray-100 text-gray-800 rounded-3xl rounded-bl-sm"
                           }`}
                         >
-                          {msg.text}
+                          {msg.text && <div>{msg.text}</div>}
+                          {msg.audio && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <audio
+                                controls
+                                src={msg.audio}
+                                className="h-8 max-w-[200px] outline-none"
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -339,60 +489,109 @@ const Chat = () => {
             )}
           </div>
 
-          {/* Մուտքագրում */}
-          <form
-            onSubmit={handleSubmit}
-            className="p-3 sm:p-4 border-t border-gray-200 bg-white/80 backdrop-blur-md flex gap-2 sm:gap-3 items-center z-10 flex-shrink-0"
-          >
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Գրեք նամակ..."
-              disabled={!auth.currentUser}
-              className="flex-1 rounded-xl sm:rounded-2xl border border-gray-200 bg-gray-50 px-4 sm:px-5 py-2 sm:py-3 outline-none focus:border-orange-400 focus:bg-white text-sm sm:text-base"
-            />
-            <button
-              type="submit"
-              disabled={!auth.currentUser}
-              className="bg-gradient-to-r from-orange-400 to-orange-500 text-white px-4 sm:px-8 py-2 sm:py-3 rounded-lg sm:rounded-2xl font-bold shadow-lg shadow-orange-500/30 text-sm sm:text-base"
-            >
-              Ուղարկել
-            </button>
-          </form>
+          {/* ՄՈՒՏՔԱԳՐՈՒՄ - TELEGRAM ՈՃՈՎ */}
+          <div className="p-3 sm:p-4 border-t border-gray-200 bg-white/80 backdrop-blur-md flex flex-col gap-3 z-10 flex-shrink-0">
+            <div className="flex items-center gap-2 relative">
+              {isRecording ? (
+                <div className="flex-1 flex items-center justify-between bg-red-50 rounded-2xl h-12 px-4 border border-red-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></div>
+                    <span className="text-red-500 font-mono font-medium tracking-wide">
+                      {formatTime(recordingTime)}
+                    </span>
+                  </div>
+                  <span className="text-gray-400 text-sm hidden sm:block animate-pulse">
+                    Ձայնագրվում է...
+                  </span>
+
+                  <button
+                    onClick={cancelRecording}
+                    className="text-gray-400 hover:text-red-500 transition-colors p-2"
+                    title="Ջնջել ձայնագրությունը"
+                  >
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSubmit();
+                  }}
+                  placeholder="Գրեք նամակ..."
+                  disabled={!currentUser}
+                  className="flex-1 h-12 rounded-2xl border border-gray-200 bg-gray-50 px-4 outline-none focus:border-orange-400 focus:bg-white text-sm sm:text-base transition-all"
+                />
+              )}
+
+              {newMessage.trim().length > 0 && !isRecording ? (
+                <button
+                  onClick={handleSubmit}
+                  className="bg-gradient-to-r from-orange-400 to-orange-500 text-white h-12 w-12 flex items-center justify-center rounded-2xl shadow-lg shadow-orange-500/30 hover:scale-105 transition-transform"
+                >
+                  <svg
+                    className="w-5 h-5 fill-current transform rotate-[-45deg] ml-1"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                  </svg>
+                </button>
+              ) : isRecording ? (
+                <button
+                  onClick={stopAndSendRecording}
+                  className="bg-gradient-to-r from-green-400 to-green-500 text-white h-12 w-12 flex items-center justify-center rounded-2xl shadow-lg shadow-green-500/30 hover:scale-105 transition-transform"
+                >
+                  <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  onClick={startRecording}
+                  disabled={!currentUser}
+                  className="bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-500 h-12 w-12 flex items-center justify-center rounded-2xl transition-colors"
+                >
+                  <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                    <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* --- ԶԱՆԳԻ ՎԻՋԵԹՆԵՐ --- */}
 
-        {/* Ելքային Աուդիո Զանգ */}
         {outgoingCallId && selectedUser !== "general" && (
           <Call
             mode="offer"
             callId={outgoingCallId}
-            caller={auth.currentUser}
+            caller={currentUser}
             callee={selectedUser}
             onClose={() => setOutgoingCallId(null)}
           />
         )}
 
-        {/* Ելքային Վիդեո Զանգ */}
         {outgoingVideoCallId && selectedUser !== "general" && (
           <VideoCall
             mode="offer"
             callId={outgoingVideoCallId}
-            caller={auth.currentUser}
+            caller={currentUser}
             callee={selectedUser}
             onClose={() => setOutgoingVideoCallId(null)}
           />
         )}
 
-        {/* Ներգնա Զանգեր (Աուդիո կամ Վիդեո) */}
         {incomingCall && incomingCall.data.type === "audio" && (
           <Call
             mode="answer"
             callId={incomingCall.id}
             caller={{ uid: incomingCall.data.caller, name: "Ներգնա Զանգ" }}
-            callee={auth.currentUser}
+            callee={currentUser}
             onClose={() => setIncomingCall(null)}
           />
         )}
@@ -402,7 +601,7 @@ const Chat = () => {
             mode="answer"
             callId={incomingCall.id}
             caller={{ uid: incomingCall.data.caller, name: "Ներգնա Վիդեոզանգ" }}
-            callee={auth.currentUser}
+            callee={currentUser}
             onClose={() => setIncomingCall(null)}
           />
         )}
