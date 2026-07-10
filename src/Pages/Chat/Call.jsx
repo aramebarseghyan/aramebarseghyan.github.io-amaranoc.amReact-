@@ -214,6 +214,8 @@ export default function Call({ mode, callId, caller, callee, onClose }) {
             {status === "connected" && (
               <span className="text-green-400">Զրույցն ընթացքում է</span>
             )}
+
+            
           </div>
         </div>
         <div className="flex items-center gap-2 z-10 flex-shrink-0">
