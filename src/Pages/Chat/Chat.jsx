@@ -12,7 +12,9 @@ import {
   serverTimestamp,
   doc,
   setDoc,
-  deleteDoc, // ԱՎԵԼԱՑՎԵԼ Է՝ ջնջելու ֆունկցիան
+  deleteDoc,
+  updateDoc, // ՆՈՐ
+  arrayUnion, // ՆՈՐ
 } from "firebase/firestore";
 import Call from "./Call";
 import VideoCall from "./VideoCall";
@@ -24,6 +26,9 @@ const Chat = () => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState("general");
   const [authReady, setAuthReady] = useState(false);
+
+  // Նամակը ջնջելու մոդալի State
+  const [msgToDelete, setMsgToDelete] = useState(null);
 
   // Զանգերի State-ներ
   const [outgoingCallId, setOutgoingCallId] = useState(null);
@@ -118,7 +123,7 @@ const Chat = () => {
     return collection(db, "chats", chatId, "messages");
   };
 
-  // Ստանալ նամակները
+  // Ստանալ նամակները և ֆիլտրել ջնջվածները
   useEffect(() => {
     if (!selectedUser) return;
     const isGeneralChat = selectedUser === "general";
@@ -132,8 +137,12 @@ const Chat = () => {
     const q = query(messagesCollection, orderBy("createdAtMs", "asc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let msgs = [];
-      snapshot.forEach((doc) => {
-        msgs.push({ ...doc.data(), id: doc.id });
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        // Ստուգում ենք, եթե նամակը ջնջված է ՏՎՅԱԼ օգտատիրոջ կողմից, չենք ցուցադրում
+        if (!data.deletedBy || !data.deletedBy.includes(currentUser?.uid)) {
+          msgs.push({ ...data, id: docSnap.id });
+        }
       });
       setMessages(msgs);
     });
@@ -148,7 +157,7 @@ const Chat = () => {
     }
   }, [messages.length, selectedUser]);
 
-  // --- ՁԱՅՆԱԳՐՈՒԹՅԱՆ ԺԱՄԱՉԱՓ ---
+  // ՁԱՅՆԱԳՐՈՒԹՅԱՆ ԺԱՄԱՉԱՓ
   useEffect(() => {
     let interval;
     if (isRecording) {
@@ -184,6 +193,7 @@ const Chat = () => {
         uid,
         createdAt: serverTimestamp(),
         createdAtMs: Date.now(),
+        deletedBy: [], // Սկզբնական դատարկ զանգված
       };
       const messagesCollection = getMessagesCollection(selectedUser);
       if (!messagesCollection) return;
@@ -194,21 +204,37 @@ const Chat = () => {
     }
   };
 
-  // --- ՆՈՐ ՖՈՒՆԿՑԻԱ՝ Նամակը ջնջելու համար ---
-  const deleteMessage = async (msgId) => {
-    const confirmDelete = window.confirm(
-      "Վստա՞հ եք, որ ուզում եք ջնջել այս նամակը:",
-    );
-    if (!confirmDelete) return;
+  // --- ՋՆՋԵԼՈՒ ՖՈՒՆԿՑԻԱՆԵՐ ---
 
+  // 1. Ջնջել միայն ինձ համար
+  const handleDeleteForMe = async () => {
+    if (!msgToDelete) return;
     try {
       const messagesCollection = getMessagesCollection(selectedUser);
       if (!messagesCollection) return;
 
-      // Ջնջում ենք նամակը բազայից ըստ իր ID-ի
-      await deleteDoc(doc(messagesCollection, msgId));
+      // Ավելացնում ենք մեր ID-ն deletedBy զանգվածի մեջ
+      await updateDoc(doc(messagesCollection, msgToDelete.id), {
+        deletedBy: arrayUnion(currentUser.uid),
+      });
+      setMsgToDelete(null); // Փակում ենք մոդալը
     } catch (error) {
-      console.error("Սխալ նամակը ջնջելիս՝", error);
+      console.error("Սխալ նամակը քեզ համար ջնջելիս՝", error);
+    }
+  };
+
+  // 2. Ջնջել բոլորի համար
+  const handleDeleteForEveryone = async () => {
+    if (!msgToDelete) return;
+    try {
+      const messagesCollection = getMessagesCollection(selectedUser);
+      if (!messagesCollection) return;
+
+      // Լրիվ ջնջում ենք բազայից
+      await deleteDoc(doc(messagesCollection, msgToDelete.id));
+      setMsgToDelete(null); // Փակում ենք մոդալը
+    } catch (error) {
+      console.error("Սխալ նամակը բոլորի համար ջնջելիս՝", error);
     }
   };
 
@@ -279,6 +305,7 @@ const Chat = () => {
         uid,
         createdAt: serverTimestamp(),
         createdAtMs: Date.now(),
+        deletedBy: [],
       };
       const messagesCollection = getMessagesCollection(selectedUser);
       if (!messagesCollection) return;
@@ -301,7 +328,7 @@ const Chat = () => {
   if (!currentUser) return <Navigate to="/login" replace />;
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 md:items-center md:justify-center md:p-6 overflow-hidden">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 md:items-center md:justify-center md:p-6 overflow-hidden relative">
       <div className="w-full max-w-6xl bg-white md:rounded-3xl shadow-xl shadow-gray-200/50 md:border border-gray-100 flex flex-row h-full md:h-[85vh] overflow-hidden">
         {/* ՁԱԽ ՊԱՆԵԼ (Օգտատերերի ցանկ) */}
         <div className="hidden sm:flex w-full sm:w-64 md:w-80 border-r border-gray-100 flex-col bg-white overflow-hidden">
@@ -478,7 +505,7 @@ const Chat = () => {
                           </span>
                         )}
 
-                        {/* Փաթեթավորում ենք նամակը և ջնջելու կոճակը՝ կողք-կողքի դնելու համար */}
+                        {/* Group փաթեթավորում, որպեսզի աղբամանը երևա hover-ի ժամանակ (և իմ, և ուրիշի նամակների վրա) */}
                         <div
                           className={`flex items-center gap-2 group ${isMine ? "flex-row-reverse" : "flex-row"}`}
                         >
@@ -501,21 +528,19 @@ const Chat = () => {
                             )}
                           </div>
 
-                          {/* ՋՆՋԵԼՈՒ ԿՈՃԱԿԸ - Երևում է միայն քո նամակների վրա */}
-                          {isMine && (
-                            <button
-                              onClick={() => deleteMessage(msg.id)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 p-1 bg-white rounded-full shadow-sm border border-gray-100"
-                              title="Ջնջել նամակը"
+                          {/* ՋՆՋԵԼՈՒ ԿՈՃԱԿԸ */}
+                          <button
+                            onClick={() => setMsgToDelete(msg)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 p-1.5 bg-white rounded-full shadow-sm border border-gray-100 flex-shrink-0"
+                            title="Ջնջել նամակը"
+                          >
+                            <svg
+                              className="w-4 h-4 fill-current"
+                              viewBox="0 0 24 24"
                             >
-                              <svg
-                                className="w-4 h-4 fill-current"
-                                viewBox="0 0 24 24"
-                              >
-                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-                              </svg>
-                            </button>
-                          )}
+                              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                            </svg>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -648,6 +673,60 @@ const Chat = () => {
           />
         )}
       </div>
+
+      {/* --- ՋՆՋԵԼՈՒ ՄՈԴԱԼ ՊԱՏՈՒՀԱՆ --- */}
+      {msgToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-3xl p-5 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Ջնջել նամակը
+            </h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Վստա՞հ եք, որ ցանկանում եք ջնջել այս հաղորդագրությունը:
+            </p>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleDeleteForMe}
+                className="w-full py-3 px-4 bg-gray-50 hover:bg-gray-100 text-gray-800 font-medium rounded-2xl transition-colors text-left flex items-center gap-3"
+              >
+                <svg
+                  className="w-5 h-5 text-gray-400"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M15 4V3H9v1H4v2h1v13c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V6h1V4h-5zm2 15H7V6h10v13z" />
+                </svg>
+                Ջնջել միայն ինձ համար
+              </button>
+
+              {/* Բոլորի համար ջնջելը երևում է միայն, եթե նամակը ՔՈՆՆ է */}
+              {msgToDelete.uid === currentUser.uid && (
+                <button
+                  onClick={handleDeleteForEveryone}
+                  className="w-full py-3 px-4 bg-red-50 hover:bg-red-100 text-red-600 font-medium rounded-2xl transition-colors text-left flex items-center gap-3"
+                >
+                  <svg
+                    className="w-5 h-5 text-red-500"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                  </svg>
+                  Ջնջել բոլորի համար
+                </button>
+              )}
+
+              <button
+                onClick={() => setMsgToDelete(null)}
+                className="w-full py-3 px-4 mt-1 text-gray-500 hover:text-gray-800 font-medium rounded-2xl transition-colors text-center"
+              >
+                Չեղարկել
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
