@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Navigate } from "react-router-dom";
-import { auth, db } from "../../firebase"; 
+import { auth, db } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   collection,
@@ -14,7 +14,7 @@ import {
   setDoc,
   deleteDoc,
   updateDoc,
-  arrayUnion
+  arrayUnion,
 } from "firebase/firestore";
 import Call from "./Call";
 import VideoCall from "./VideoCall";
@@ -37,10 +37,10 @@ const Chat = () => {
 
   // Ձայնային նամակների State-ներ
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0); 
+  const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-  const isCancelledRef = useRef(false); 
+  const isCancelledRef = useRef(false);
 
   // Typing ինդիկատորի ռեֆ
   const typingTimeoutRef = useRef(null);
@@ -61,9 +61,9 @@ const Chat = () => {
             email: user.email,
             avatar: user.photoURL || "https://via.placeholder.com/40",
             lastSeen: serverTimestamp(),
-            typingTo: null // Սկզբնական վիճակում ոչ մեկի չի տպում
+            typingTo: null, // Սկզբնական վիճակում ոչ մեկի չի տպում
           },
-          { merge: true }
+          { merge: true },
         );
         setSelectedUser((prev) => (prev ? prev : "general"));
       } else {
@@ -100,7 +100,7 @@ const Chat = () => {
     const q = query(
       collection(db, "calls"),
       where("callee", "==", currentUser.uid),
-      where("status", "in", ["ringing", "connected"])
+      where("status", "in", ["ringing", "connected"]),
     );
     const unsub = onSnapshot(q, (snapshot) => {
       let activeCall = null;
@@ -155,7 +155,8 @@ const Chat = () => {
   // Ավտոմատ սքրոլ ներքև
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
     }
   }, [messages.length, selectedUser]);
 
@@ -164,12 +165,14 @@ const Chat = () => {
     setNewMessage(e.target.value);
 
     if (!currentUser) return;
-    
+
     const targetId = selectedUser === "general" ? "general" : selectedUser.uid;
 
     try {
       // Նշում ենք, որ տպում ենք
-      await updateDoc(doc(db, "users", currentUser.uid), { typingTo: targetId });
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        typingTo: targetId,
+      });
 
       // Մաքրում ենք հին timeout-ը
       if (typingTimeoutRef.current) {
@@ -200,7 +203,7 @@ const Chat = () => {
         uid,
         createdAt: serverTimestamp(),
         createdAtMs: Date.now(),
-        deletedBy: []
+        deletedBy: [],
       };
       const messagesCollection = getMessagesCollection(selectedUser);
       if (!messagesCollection) return;
@@ -210,7 +213,6 @@ const Chat = () => {
       // Նամակն ուղարկելիս անմիջապես անջատում ենք typing-ը
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       await updateDoc(doc(db, "users", currentUser.uid), { typingTo: null });
-
     } catch (error) {
       console.error("Հաղորդագրությունը չուղարկվեց՝", error);
     }
@@ -223,7 +225,7 @@ const Chat = () => {
       const messagesCollection = getMessagesCollection(selectedUser);
       if (!messagesCollection) return;
       await updateDoc(doc(messagesCollection, msgToDelete.id), {
-        deletedBy: arrayUnion(currentUser.uid)
+        deletedBy: arrayUnion(currentUser.uid),
       });
       setMsgToDelete(null);
     } catch (error) {
@@ -258,7 +260,9 @@ const Chat = () => {
   }, [isRecording]);
 
   const formatTime = (time) => {
-    const mins = Math.floor(time / 60).toString().padStart(2, "0");
+    const mins = Math.floor(time / 60)
+      .toString()
+      .padStart(2, "0");
     const secs = (time % 60).toString().padStart(2, "0");
     return `${mins}:${secs}`;
   };
@@ -277,7 +281,9 @@ const Chat = () => {
 
       mediaRecorder.onstop = async () => {
         if (!isCancelledRef.current) {
-          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+          const audioBlob = new Blob(audioChunksRef.current, {
+            type: "audio/webm",
+          });
           const reader = new FileReader();
           reader.readAsDataURL(audioBlob);
           reader.onloadend = async () => {
@@ -324,7 +330,7 @@ const Chat = () => {
         uid,
         createdAt: serverTimestamp(),
         createdAtMs: Date.now(),
-        deletedBy: []
+        deletedBy: [],
       };
       const messagesCollection = getMessagesCollection(selectedUser);
       if (!messagesCollection) return;
@@ -347,17 +353,17 @@ const Chat = () => {
   if (!currentUser) return <Navigate to="/login" replace />;
 
   // Իրական ժամանակում գտնում ենք selectedUser-ի տվյալները users բազայից (որպեսզի տեսնենք նրա typing status-ը)
-  const activeSelectedUser = selectedUser === "general" 
-    ? "general" 
-    : users.find(u => u.uid === selectedUser.uid) || selectedUser;
+  const activeSelectedUser =
+    selectedUser === "general"
+      ? "general"
+      : users.find((u) => u.uid === selectedUser.uid) || selectedUser;
 
   // Ստուգում ենք, թե արդյոք General չատում ինչ-որ մեկը տպում է
-  const typingUsersInGeneral = users.filter(u => u.typingTo === "general");
+  const typingUsersInGeneral = users.filter((u) => u.typingTo === "general");
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 md:items-center md:justify-center md:p-6 overflow-hidden relative">
       <div className="w-full max-w-6xl bg-white md:rounded-3xl shadow-xl shadow-gray-200/50 md:border border-gray-100 flex flex-row h-full md:h-[85vh] overflow-hidden">
-        
         {/* ՁԱԽ ՊԱՆԵԼ (Օգտատերերի ցանկ) */}
         <div className="hidden sm:flex w-full sm:w-64 md:w-80 border-r border-gray-100 flex-col bg-white overflow-hidden">
           <div className="p-4 sm:p-5 border-b border-gray-100 bg-white">
@@ -378,7 +384,9 @@ const Chat = () => {
                 #
               </div>
               <div className="flex flex-col">
-                <span className={`text-base font-bold ${selectedUser === "general" ? "text-orange-600" : "text-gray-800"}`}>
+                <span
+                  className={`text-base font-bold ${selectedUser === "general" ? "text-orange-600" : "text-gray-800"}`}
+                >
                   Ընդհանուր չատ
                 </span>
                 <span className="text-xs text-gray-500">Հանրային սենյակ</span>
@@ -403,18 +411,28 @@ const Chat = () => {
                   }`}
                 >
                   <div className="relative">
-                    <img src={user.avatar || "https://via.placeholder.com/40"} alt="avatar" className="w-12 h-12 rounded-full object-cover shadow-sm border border-gray-100" />
+                    <img
+                      src={user.avatar || "https://via.placeholder.com/40"}
+                      alt="avatar"
+                      className="w-12 h-12 rounded-full object-cover shadow-sm border border-gray-100"
+                    />
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                   </div>
                   <div className="flex flex-col">
-                    <span className={`text-sm font-bold ${selectedUser?.uid === user.uid ? "text-orange-600" : "text-gray-800"}`}>
+                    <span
+                      className={`text-sm font-bold ${selectedUser?.uid === user.uid ? "text-orange-600" : "text-gray-800"}`}
+                    >
                       {user.name || "Անանուն"}
                     </span>
                     {/* Եթե այս օգտատերը ինձ է տպում, ձախ պանելում էլ ցույց տանք */}
                     {user.typingTo === currentUser.uid ? (
-                      <span className="text-xs text-orange-500 italic animate-pulse">Տպում է...</span>
+                      <span className="text-xs text-orange-500 italic animate-pulse">
+                        Տպում է...
+                      </span>
                     ) : (
-                      <span className="text-xs text-gray-500 truncate max-w-[120px]">Անձնական նամակ</span>
+                      <span className="text-xs text-gray-500 truncate max-w-[120px]">
+                        Անձնական նամակ
+                      </span>
                     )}
                   </div>
                 </div>
@@ -429,7 +447,6 @@ const Chat = () => {
 
         {/* ԱՋ ՊԱՆԵԼ */}
         <div className="flex-1 flex flex-col bg-[#f8f9fa] overflow-hidden">
-          
           {/* Վերնագիր և Զանգի կոճակներ */}
           <div className="p-3 sm:p-4 border-b border-gray-200 bg-white/80 backdrop-blur-md flex items-center gap-3 sm:gap-4 z-10 sticky top-0 w-full shadow-sm flex-shrink-0">
             {selectedUser === "general" ? (
@@ -444,8 +461,8 @@ const Chat = () => {
                   {/* General չատի typing ինդիկատոր */}
                   {typingUsersInGeneral.length > 0 && (
                     <span className="text-xs text-orange-500 italic animate-pulse font-medium">
-                      {typingUsersInGeneral.length === 1 
-                        ? `${typingUsersInGeneral[0].name}-ը տպում է...` 
+                      {typingUsersInGeneral.length === 1
+                        ? `${typingUsersInGeneral[0].name}-ը տպում է...`
                         : "Մի քանի հոգի տպում են..."}
                     </span>
                   )}
@@ -468,7 +485,9 @@ const Chat = () => {
                       Տպում է...
                     </span>
                   ) : (
-                    <span className="text-xs text-green-500 font-medium">Առցանց</span>
+                    <span className="text-xs text-green-500 font-medium">
+                      Առցանց
+                    </span>
                   )}
                 </div>
 
@@ -485,7 +504,9 @@ const Chat = () => {
                     <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                       <path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57-.35-.11-.74-.03-1.02.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1C8.7 6.45 8.5 5.25 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1zM19 12h2a9 9 0 0 0-9-9v2c3.87 0 7 3.13 7 7zm-4 0h2c0-2.76-2.24-5-5-5v2c1.66 0 3 1.34 3 3z" />
                     </svg>
-                    <span className="hidden sm:inline font-medium text-sm">Զանգ</span>
+                    <span className="hidden sm:inline font-medium text-sm">
+                      Զանգ
+                    </span>
                   </button>
 
                   <button
@@ -500,7 +521,9 @@ const Chat = () => {
                     <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                       <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
                     </svg>
-                    <span className="hidden sm:inline font-medium text-sm">Վիդեո</span>
+                    <span className="hidden sm:inline font-medium text-sm">
+                      Վիդեո
+                    </span>
                   </button>
                 </div>
               </>
@@ -516,17 +539,33 @@ const Chat = () => {
               messages.map((msg) => {
                 const isMine = msg.uid === currentUser?.uid;
                 return (
-                  <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                    <div className={`flex gap-3 max-w-[85%] sm:max-w-[75%] ${isMine ? "flex-row-reverse" : "flex-row"}`}>
+                  <div
+                    key={msg.id}
+                    className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`flex gap-3 max-w-[85%] sm:max-w-[75%] ${isMine ? "flex-row-reverse" : "flex-row"}`}
+                    >
                       {!isMine && (
-                        <img src={msg.avatar || "https://via.placeholder.com/40"} alt="avatar" className="w-8 h-8 rounded-full object-cover shadow-sm self-end mb-1" />
+                        <img
+                          src={msg.avatar || "https://via.placeholder.com/40"}
+                          alt="avatar"
+                          className="w-8 h-8 rounded-full object-cover shadow-sm self-end mb-1"
+                        />
                       )}
-                      
-                      <div className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}>
-                        {!isMine && <span className="text-[11px] text-gray-500 mb-1 ml-1">{msg.name}</span>}
-                        
-                        <div className={`flex items-center gap-2 group ${isMine ? "flex-row-reverse" : "flex-row"}`}>
-                          
+
+                      <div
+                        className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}
+                      >
+                        {!isMine && (
+                          <span className="text-[11px] text-gray-500 mb-1 ml-1">
+                            {msg.name}
+                          </span>
+                        )}
+
+                        <div
+                          className={`flex items-center gap-2 group ${isMine ? "flex-row-reverse" : "flex-row"}`}
+                        >
                           <div
                             className={`px-4 py-2 sm:px-5 sm:py-3 shadow-sm text-[15px] leading-relaxed ${
                               isMine
@@ -537,7 +576,11 @@ const Chat = () => {
                             {msg.text && <div>{msg.text}</div>}
                             {msg.audio && (
                               <div className="flex items-center gap-2 mt-1">
-                                  <audio controls src={msg.audio} className="h-8 max-w-[200px] outline-none" />
+                                <audio
+                                  controls
+                                  src={msg.audio}
+                                  className="h-8 max-w-[200px] outline-none"
+                                />
                               </div>
                             )}
                           </div>
@@ -547,8 +590,11 @@ const Chat = () => {
                             className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 p-1.5 bg-white rounded-full shadow-sm border border-gray-100 flex-shrink-0"
                             title="Ջնջել նամակը"
                           >
-                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            <svg
+                              className="w-4 h-4 fill-current"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
                             </svg>
                           </button>
                         </div>
@@ -559,7 +605,9 @@ const Chat = () => {
               })
             ) : (
               <div className="flex flex-col items-center justify-center h-full opacity-50">
-                <p className="text-gray-500 font-medium">Նամակագրությունը դատարկ է</p>
+                <p className="text-gray-500 font-medium">
+                  Նամակագրությունը դատարկ է
+                </p>
               </div>
             )}
           </div>
@@ -567,7 +615,6 @@ const Chat = () => {
           {/* ՄՈՒՏՔԱԳՐՈՒՄ */}
           <div className="p-3 sm:p-4 border-t border-gray-200 bg-white/80 backdrop-blur-md flex flex-col gap-3 z-10 flex-shrink-0">
             <div className="flex items-center gap-2 relative">
-              
               {isRecording ? (
                 <div className="flex-1 flex items-center justify-between bg-red-50 rounded-2xl h-12 px-4 border border-red-100">
                   <div className="flex items-center gap-3">
@@ -579,14 +626,14 @@ const Chat = () => {
                   <span className="text-gray-400 text-sm hidden sm:block animate-pulse">
                     Ձայնագրվում է...
                   </span>
-                  
+
                   <button
                     onClick={cancelRecording}
                     className="text-gray-400 hover:text-red-500 transition-colors p-2"
                     title="Ջնջել ձայնագրությունը"
                   >
                     <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
                     </svg>
                   </button>
                 </div>
@@ -595,7 +642,9 @@ const Chat = () => {
                   type="text"
                   value={newMessage}
                   onChange={handleTyping} // ԱՎԵԼԱՑՎԱԾ Է TYPING ՖՈՒՆԿՑԻԱՆ
-                  onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSubmit();
+                  }}
                   placeholder="Գրեք նամակ..."
                   disabled={!currentUser}
                   className="flex-1 h-12 rounded-2xl border border-gray-200 bg-gray-50 px-4 outline-none focus:border-orange-400 focus:bg-white text-sm sm:text-base transition-all"
@@ -607,8 +656,11 @@ const Chat = () => {
                   onClick={handleSubmit}
                   className="bg-gradient-to-r from-orange-400 to-orange-500 text-white h-12 w-12 flex items-center justify-center rounded-2xl shadow-lg shadow-orange-500/30 hover:scale-105 transition-transform"
                 >
-                  <svg className="w-5 h-5 fill-current transform rotate-[-45deg] ml-1" viewBox="0 0 24 24">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                  <svg
+                    className="w-5 h-5 fill-current transform rotate-[-45deg] ml-1"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                   </svg>
                 </button>
               ) : isRecording ? (
@@ -617,7 +669,7 @@ const Chat = () => {
                   className="bg-gradient-to-r from-green-400 to-green-500 text-white h-12 w-12 flex items-center justify-center rounded-2xl shadow-lg shadow-green-500/30 hover:scale-105 transition-transform"
                 >
                   <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                   </svg>
                 </button>
               ) : (
@@ -682,16 +734,24 @@ const Chat = () => {
       {msgToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="bg-white rounded-3xl p-5 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Ջնջել նամակը</h3>
-            <p className="text-sm text-gray-500 mb-5">Վստա՞հ եք, որ ցանկանում եք ջնջել այս հաղորդագրությունը:</p>
-            
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Ջնջել նամակը
+            </h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Վստա՞հ եք, որ ցանկանում եք ջնջել այս հաղորդագրությունը:
+            </p>
+
             <div className="flex flex-col gap-2">
               <button
                 onClick={handleDeleteForMe}
                 className="w-full py-3 px-4 bg-gray-50 hover:bg-gray-100 text-gray-800 font-medium rounded-2xl transition-colors text-left flex items-center gap-3"
               >
-                <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M15 4V3H9v1H4v2h1v13c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V6h1V4h-5zm2 15H7V6h10v13z"/>
+                <svg
+                  className="w-5 h-5 text-gray-400"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M15 4V3H9v1H4v2h1v13c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V6h1V4h-5zm2 15H7V6h10v13z" />
                 </svg>
                 Ջնջել միայն ինձ համար
               </button>
@@ -701,8 +761,12 @@ const Chat = () => {
                   onClick={handleDeleteForEveryone}
                   className="w-full py-3 px-4 bg-red-50 hover:bg-red-100 text-red-600 font-medium rounded-2xl transition-colors text-left flex items-center gap-3"
                 >
-                  <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                  <svg
+                    className="w-5 h-5 text-red-500"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
                   </svg>
                   Ջնջել բոլորի համար
                 </button>
@@ -718,7 +782,6 @@ const Chat = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };
