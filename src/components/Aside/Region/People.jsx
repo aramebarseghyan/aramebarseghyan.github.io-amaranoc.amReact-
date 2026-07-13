@@ -1,29 +1,37 @@
-import { useState } from "react";
+import React from "react";
 
-const People = () => {
-  const [num, setNum] = useState(1);
+const People = ({ peopleCount, setPeopleCount }) => {
+  const handleMinus = () => {
+    if (peopleCount > 1) {
+      setPeopleCount(peopleCount - 1);
+    }
+  };
+
+  const handlePlus = () => {
+    setPeopleCount(peopleCount + 1);
+  };
 
   return (
-    <div className="w-full pt-5 border-t border-[#f0f0f0]">
-      <h4 className="text-[16px] font-bold mb-4 text-[#111]">
+    <div className="flex flex-col gap-3 font-sans mt-6">
+      <h3 className="font-bold text-[16px] text-[#222] m-0">
         Մարդկանց թույլատրելի քանակ
-      </h4>
-      <div className="flex items-center gap-4">
+      </h3>
+
+      <div className="flex items-center gap-3 mt-1">
         <button
-          onClick={() => setNum((prev) => (prev > 1 ? prev - 1 : 1))}
-          className="h-11 w-11 rounded-full bg-[#f2f2f2] hover:bg-[#e5e5e5] text-[#111] flex items-center justify-center text-xl cursor-pointer transition-colors border-none"
+          onClick={handleMinus}
+          className="w-10 h-10 rounded-full bg-[#f4f4f4] flex items-center justify-center text-[20px] text-[#222] border-none cursor-pointer hover:bg-[#e5e5e5] transition-colors"
         >
           −
         </button>
-        <input
-          value={num}
-          className="text-center rounded-[12px] h-11 w-[70px] border border-[#ddd] text-[16px] font-medium outline-none"
-          type="text"
-          readOnly
-        />
+
+        <div className="w-[70px] h-10 border border-[#e5e5e5] rounded-[10px] flex items-center justify-center text-[16px] font-medium text-[#222]">
+          {peopleCount}
+        </div>
+
         <button
-          onClick={() => setNum((prev) => prev + 1)}
-          className="h-11 w-11 rounded-full bg-[#f2f2f2] hover:bg-[#e5e5e5] text-[#111] flex items-center justify-center text-xl cursor-pointer transition-colors border-none"
+          onClick={handlePlus}
+          className="w-10 h-10 rounded-full bg-[#f4f4f4] flex items-center justify-center text-[20px] text-[#222] border-none cursor-pointer hover:bg-[#e5e5e5] transition-colors"
         >
           +
         </button>

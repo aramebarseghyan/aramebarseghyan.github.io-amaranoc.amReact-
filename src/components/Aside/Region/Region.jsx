@@ -1,25 +1,62 @@
-import { regionsList } from "./regionsData";
+import React from "react";
 
-const Region = () => {
+const Region = ({ selectedRegions = [], onRegionChange, houses = [] }) => {
+  const regionNames = [
+    "Երևան",
+    "Դիլիջան",
+    "Ծաղկաձոր",
+    "Սևան",
+    "Գառնի",
+    "Աշտարակ",
+    "Բյուրական",
+    "Աղվերան",
+    "Հանքավան",
+    "Արզնի",
+    "Գյուլագարակ",
+    "Ոսկեհատ",
+    "Ջերմուկ",
+    "Գյումրի",
+    "Վանաձոր",
+    "Իջևան",
+    "Ստեփանավան",
+    "Գորիս",
+    "Կապան",
+  ];
+
   return (
-    <div className="w-full">
-      <h3 className="text-[16px] font-bold text-[#111] mb-4">Տարածաշրջան</h3>
-      <div className="h-[220px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#222] [&::-webkit-scrollbar-thumb]:rounded-[2px]">
-        {regionsList.map((region, index) => (
-          <p key={index} className="flex items-center gap-3 mb-3.5">
-            <input
-              type="checkbox"
-              id={`region-${index}`}
-              className="cursor-pointer w-4 h-4 rounded border-gray-300 accent-[#111]"
-            />
+    <div className="flex flex-col gap-3 font-sans">
+      <h3 className="font-bold text-[16px] text-[#222] mb-2 m-0">
+        Տարածաշրջան
+      </h3>
+
+      <div className="flex flex-col gap-3 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
+        {regionNames.map((region) => {
+          const count = houses.filter(
+            (h) => h.location && h.location.includes(region),
+          ).length;
+
+          return (
             <label
-              htmlFor={`region-${index}`}
-              className="cursor-pointer text-[15px] text-[#444]"
+              key={region}
+              className="flex items-center justify-between cursor-pointer group"
             >
-              {region}
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={selectedRegions.includes(region)}
+                  onChange={() => onRegionChange(region)}
+                  className="w-[18px] h-[18px] rounded-[4px] border-[#e5e5e5] text-orange-500 focus:ring-orange-500 cursor-pointer"
+                />
+                <span className="text-[14px] text-[#333] group-hover:text-orange-500 transition-colors">
+                  {region}
+                </span>
+              </div>
+              <span className="text-[12px] text-gray-400 font-medium">
+                {count}
+              </span>
             </label>
-          </p>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -1,45 +1,46 @@
-import { useState } from "react";
+import React from "react";
 
-const arr = ["֏", "$", "€", "₽"];
-
-const Price = ({ plc1, plc2 }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-
+const Price = ({ minPrice, maxPrice, setMinPrice, setMaxPrice }) => {
   return (
-    <div className="w-full border-t border-[#f0f0f0] pt-5">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full mb-4 gap-3 sm:gap-0">
-        {/* Добавил flex-col для мобилок, на планшетах и выше - в строку */}
-        <h4 className="text-[16px] font-bold text-[#111] m-0">Արժեք</h4>
-        <div className="flex gap-2 m-0">
-          {arr.map((valute, index) => (
-            <div
-              key={index}
-              className={`w-9 h-9 flex items-center justify-center rounded-full cursor-pointer font-medium text-[14px] transition-all duration-200 ${
-                activeIndex === index
-                  ? "bg-[#111] text-white"
-                  : "bg-white border border-[#ddd] text-[#555] hover:border-[#aaa]"
-              }`}
-              onClick={() => setActiveIndex(index)}
-            >
-              {valute}
-            </div>
-          ))}
+    <div className="flex flex-col gap-4 font-sans mt-6">
+      <div className="flex justify-between items-center">
+        <h3 className="font-bold text-[16px] text-[#222] m-0">Արժեք</h3>
+        <div className="flex gap-2">
+          <button className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[14px] font-bold bg-[#1a1a1a] text-white border-none cursor-pointer">
+            ֏
+          </button>
+          <button className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[14px] font-medium text-gray-500 bg-white border border-[#e5e5e5] cursor-pointer hover:bg-gray-50">
+            $
+          </button>
+          <button className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[14px] font-medium text-gray-500 bg-white border border-[#e5e5e5] cursor-pointer hover:bg-gray-50">
+            €
+          </button>
+          <button className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[14px] font-medium text-gray-500 bg-white border border-[#e5e5e5] cursor-pointer hover:bg-gray-50">
+            ₽
+          </button>
         </div>
       </div>
 
-      {/* Сделал инпуты flex-1, чтобы они равномерно тянулись на любом экране */}
-      <div className="flex items-center justify-between gap-2 sm:gap-3 w-full">
-        <input
-          placeholder={plc1}
-          type="text"
-          className="flex-1 min-w-[80px] px-3 h-[44px] border border-[#ddd] rounded-[12px] text-[14px] outline-none focus:border-[#111] transition-colors"
-        />
-        <span className="text-[#888] font-medium">-</span>
-        <input
-          placeholder={plc2}
-          type="text"
-          className="flex-1 min-w-[80px] px-3 h-[44px] border border-[#ddd] rounded-[12px] text-[14px] outline-none focus:border-[#111] transition-colors"
-        />
+      <div className="flex items-center gap-3 w-full">
+        <div className="relative flex-1">
+          <input
+            type="number"
+            placeholder="Սկսած"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            className="w-full h-11 px-3 border border-[#e5e5e5] rounded-[10px] text-[14px] outline-none focus:border-orange-400 transition-colors"
+          />
+        </div>
+        <span className="text-gray-400 text-[14px]">-</span>
+        <div className="relative flex-1">
+          <input
+            type="number"
+            placeholder="Մինչև"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            className="w-full h-11 px-3 border border-[#e5e5e5] rounded-[10px] text-[14px] outline-none focus:border-orange-400 transition-colors"
+          />
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Navigate } from "react-router-dom";
 import { auth, db } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -26,6 +26,7 @@ const Chat = () => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState("general");
   const [authReady, setAuthReady] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Նամակը ջնջելու մոդալի State
   const [msgToDelete, setMsgToDelete] = useState(null);
@@ -67,7 +68,7 @@ const Chat = () => {
         );
         setSelectedUser((prev) => (prev ? prev : "general"));
       } else {
-        setMessages([]);
+        Promise.resolve().then(() => setMessages([]));
         setSelectedUser("general");
       }
     });
@@ -77,7 +78,7 @@ const Chat = () => {
   // Ստանալ օգտատերերին (այստեղ էլ կստանանք typing կարգավիճակները)
   useEffect(() => {
     if (!authReady || !currentUser?.uid) {
-      setUsers([]);
+      Promise.resolve().then(() => setUsers([]));
       return;
     }
     const q = query(collection(db, "users"));
@@ -115,24 +116,19 @@ const Chat = () => {
     return () => unsub();
   }, [selectedUser, currentUser]);
 
-  const getChatId = (targetUser) => {
-    if (!currentUser?.uid || !targetUser?.uid) return null;
-    return [currentUser.uid, targetUser.uid].sort().join("_");
-  };
-
-  const getMessagesCollection = (targetUser) => {
+  const getMessagesCollection = useCallback((targetUser) => {
     if (targetUser === "general") return collection(db, "messages");
-    const chatId = getChatId(targetUser);
-    if (!chatId) return null;
+    if (!currentUser?.uid || !targetUser?.uid) return null;
+    const chatId = [currentUser.uid, targetUser.uid].sort().join("_");
     return collection(db, "chats", chatId, "messages");
-  };
+  }, [currentUser]);
 
   // Ստանալ նամակները
   useEffect(() => {
     if (!selectedUser) return;
     const isGeneralChat = selectedUser === "general";
     if (!isGeneralChat && !currentUser?.uid) {
-      setMessages([]);
+      Promise.resolve().then(() => setMessages([]));
       return;
     }
     const messagesCollection = getMessagesCollection(selectedUser);
@@ -150,7 +146,7 @@ const Chat = () => {
       setMessages(msgs);
     });
     return () => unsubscribe();
-  }, [selectedUser, currentUser]);
+  }, [selectedUser, currentUser, getMessagesCollection]);
 
   // Ավտոմատ սքրոլ ներքև
   useEffect(() => {
@@ -254,7 +250,7 @@ const Chat = () => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
     } else {
-      setRecordingTime(0);
+      Promise.resolve().then(() => setRecordingTime(0));
     }
     return () => clearInterval(interval);
   }, [isRecording]);
@@ -360,6 +356,13 @@ const Chat = () => {
 
   // Ստուգում ենք, թե արդյոք General չատում ինչ-որ մեկը տպում է
   const typingUsersInGeneral = users.filter((u) => u.typingTo === "general");
+  const filteredUsers = users.filter((user) => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) return true;
+
+    const searchableText = `${user.name || ""} ${user.email || ""}`.toLowerCase();
+    return searchableText.includes(normalizedQuery);
+  });
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 md:items-center md:justify-center md:p-6 overflow-hidden relative">
@@ -372,6 +375,16 @@ const Chat = () => {
             </h2>
           </div>
           <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-1">
+            <div className="px-1 pb-2">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Որոնել օգտվողի անունով"
+                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-orange-400 focus:bg-white"
+              />
+            </div>
+
             <div
               onClick={() => setSelectedUser("general")}
               className={`flex items-center gap-4 p-3 rounded-2xl transition-all duration-200 cursor-pointer ${
@@ -399,8 +412,8 @@ const Chat = () => {
               </span>
             </div>
 
-            {users.length > 0 ? (
-              users.map((user) => (
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map((user) => (
                 <div
                   key={user.id || user.uid}
                   onClick={() => setSelectedUser(user)}
@@ -439,7 +452,7 @@ const Chat = () => {
               ))
             ) : (
               <p className="text-sm text-gray-400 text-center mt-6">
-                Օգտատերեր չկան
+                {searchQuery ? "Ոչ մի օգտատեր չի գտնվել" : "Օգտատերեր չկան"}
               </p>
             )}
           </div>
@@ -772,6 +785,7 @@ const Chat = () => {
                 </button>
               )}
 
+              
               <button
                 onClick={() => setMsgToDelete(null)}
                 className="w-full py-3 px-4 mt-1 text-gray-500 hover:text-gray-800 font-medium rounded-2xl transition-colors text-center"

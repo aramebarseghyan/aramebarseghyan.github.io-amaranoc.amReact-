@@ -3,10 +3,10 @@ import { useEffect } from "react";
 import { getRedirectResult } from "firebase/auth";
 import { auth } from "./firebase";
 import Header from "./components/header/Header";
-import Aside from "./components/Aside/Aside";
-import Main from "./components/Main/Main";
 import NaxaFooter from "./components/NaxaFooter/NaxaFooter";
 import Footer from "./components/Footer/Footer";
+
+import Home from "./components/Main/Houses/Home";
 import Discounts from "./Pages/Discount/Discounts";
 import Services from "./Pages/Services/Services";
 import Info from "./Pages/Info/Info";
@@ -19,14 +19,9 @@ function App() {
   useEffect(() => {
     getRedirectResult(auth)
       .then((result) => {
-        if (result) {
-          const user = result.user;
-          console.log("Google sign-in success:", user);
-        }
+        if (result) console.log("Google sign-in success:", result.user);
       })
-      .catch((error) => {
-        console.error("Redirect sign-in error:", error);
-      });
+      .catch((error) => console.error("Redirect error:", error));
   }, []);
 
   return (
@@ -35,28 +30,13 @@ function App() {
         <Header />
 
         <Routes>
-          <Route
-            path="/"
-            element={
-              <div className="max-w-[1320px] mx-auto px-[15px] xl:px-[20px] flex flex-col lg:flex-row items-start gap-5 lg:gap-[30px] mt-[30px] mb-[50px]">
-                <div className="w-full lg:w-[280px] flex-shrink-0">
-                  <Aside />
-                </div>
-                <div className="flex-1 w-full overflow-hidden">
-                  <Main />
-                </div>
-              </div>
-            }
-          />
-
+          <Route path="/" element={<Home />} />
           <Route path="/discounts" element={<Discounts />} />
           <Route path="/services" element={<Services />} />
           <Route path="/info" element={<Info />} />
-
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/chat" element={<Chat />} />
-
           <Route path="/house/:id" element={<HouseDetails />} />
         </Routes>
 
