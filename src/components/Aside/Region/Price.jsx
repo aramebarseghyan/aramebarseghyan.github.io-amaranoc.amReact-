@@ -1,5 +1,3 @@
-import React from "react";
-
 const Price = ({ minPrice, maxPrice, setMinPrice, setMaxPrice }) => {
   return (
     <div className="flex flex-col gap-4 font-sans mt-6">
